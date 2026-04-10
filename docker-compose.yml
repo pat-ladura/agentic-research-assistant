@@ -1,0 +1,77 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: agentic-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: agentic_research_db
+    ports:
+      - '5433:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - agentic-network
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: agentic-ollama
+    ports:
+      - '11434:11434'
+    volumes:
+      - /mnt/e/ollama-data:/root/.ollama
+    networks:
+      - agentic-network
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+    profiles:
+      - ollama
+
+  app:
+    build:
+      context: .
+      dockerfile: packages/api/Dockerfile
+    container_name: agentic-api
+    ports:
+      - '3005:3005'
+    env_file:
+      - ./packages/api/.env
+    volumes:
+      - ./packages/api/src:/app/src # Enable hot reload for source files
+    command: pnpm dev # Use dev server with file watching
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - agentic-network
+    profiles:
+      - app
+
+  web:
+    build:
+      context: .
+      dockerfile: packages/web/Dockerfile
+    container_name: agentic-web
+    ports:
+      - '5173:5173'
+    env_file:
+      - ./packages/web/.env.local
+    volumes:
+      - ./packages/web/src:/app/packages/web/src # Enable hot reload for source files
+    networks:
+      - agentic-network
+    profiles:
+      - web
+
+volumes:
+  postgres_data:
+  ollama_data:
+
+networks:
+  agentic-network:
+    driver: bridge
