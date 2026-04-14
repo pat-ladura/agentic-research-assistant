@@ -161,8 +161,9 @@ Allow clients to subscribe to real-time job progress updates without polling.
 ```ts
 import { EventEmitter } from 'events';
 
+// setMaxListeners(0) = unlimited — the SSE route enforces the real limit via activeJobStreams Map
 export const jobEmitter = new EventEmitter();
-jobEmitter.setMaxListeners(100);
+jobEmitter.setMaxListeners(0);
 
 export interface JobProgressEvent {
   jobId: string;
@@ -181,28 +182,71 @@ export function emitJobProgress(event: JobProgressEvent): void {
 
 **`src/routes/research.routes.ts`** — add two new endpoints
 
-`GET /api/research/jobs/:id/stream` — SSE endpoint
+`GET /api/research/jobs/:id/stream` — SSE endpoint with guardrails
+
+Guardrails implemented (memory-leak prevention):
+- **1 connection per job** — `activeJobStreams` Map returns 409 on duplicate
+- **Heartbeat** — SSE comment line every 15 s; surfaces dead TCP connections through proxies
+- **Hard TTL** — 10 min `setTimeout` force-closes zombie connections with a `failed` event
+- **Auto-close on terminal status** — `onProgress` closes when `status === 'completed' | 'failed'`
+- **Idempotent cleanup** — `closed` boolean ensures `cleanup()` never double-removes the listener
+- **`socket.setNoDelay(true)`** — disables Nagle's algorithm so heartbeat bytes flush immediately
 
 ```ts
-import { jobEmitter } from '../queue/job-events';
+import { jobEmitter, type JobProgressEvent } from '../queue/job-events';
+
+const SSE_HEARTBEAT_MS = 15_000;
+const SSE_MAX_TTL_MS = 10 * 60_000;
+const activeJobStreams = new Map<string, boolean>();
 
 router.get('/jobs/:id/stream', (req, res) => {
-  const { id } = req.params;
+  const id = req.params['id'] as string;
+
+  if (activeJobStreams.get(id)) {
+    res.status(409).json({ error: 'A stream for this job is already active' });
+    return;
+  }
 
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
+  req.socket?.setNoDelay(true); // flush small writes immediately
 
-  const onProgress = (data: unknown) => {
-    res.write(`data: ${JSON.stringify(data)}\n\n`);
+  activeJobStreams.set(id, true);
+  let closed = false;
+
+  const cleanup = () => {
+    if (closed) return;
+    closed = true;
+    clearInterval(heartbeat);
+    clearTimeout(ttlTimeout);
+    jobEmitter.off(id, onProgress);
+    activeJobStreams.delete(id);
+  };
+
+  const onProgress = (event: JobProgressEvent) => {
+    if (closed) return;
+    res.write(`data: ${JSON.stringify(event)}\n\n`);
+    if (event.status === 'completed' || event.status === 'failed') {
+      cleanup(); res.end();
+    }
   };
 
   jobEmitter.on(id, onProgress);
 
-  req.on('close', () => {
-    jobEmitter.off(id, onProgress);
-  });
+  const heartbeat = setInterval(() => {
+    if (!closed) res.write(': heartbeat\n\n');
+  }, SSE_HEARTBEAT_MS);
+
+  const ttlTimeout = setTimeout(() => {
+    if (!closed) {
+      res.write(`data: ${JSON.stringify({ jobId: id, step: 'stream', status: 'failed', message: 'Stream TTL exceeded' })}\n\n`);
+      cleanup(); res.end();
+    }
+  }, SSE_MAX_TTL_MS);
+
+  req.on('close', cleanup);
 });
 ```
 
@@ -214,11 +258,26 @@ router.get('/jobs/:id', (req, res) => {
 });
 ```
 
-### Validation
+### Web client — `src/hooks/useSSE.ts`
 
-- Open `GET /api/research/jobs/test-id/stream` in a browser or curl with `--no-buffer`
-- Manually call `emitJobProgress({ jobId: 'test-id', step: 'test', status: 'progress', message: 'hello' })` from a test script
-- Confirm the event appears in the SSE stream without closing the connection
+Native `EventSource` cannot send custom headers — use `@microsoft/fetch-event-source` instead.
+
+```ts
+import { fetchEventSource } from '@microsoft/fetch-event-source';
+// AbortController for cleanup on unmount
+// Pass x-api-key + Authorization headers
+// onerror throws to stop automatic retry (server sends terminal event on job end)
+// onmessage skips heartbeat comment frames (empty msg.data)
+```
+
+Install: `pnpm add @microsoft/fetch-event-source` (web package).
+
+### Validation ✅ (verified)
+
+- `GET /api/research/jobs/:id/stream` opens and holds connection (HTTP 200)
+- Second request to same job ID while first is active → HTTP 409 `{"error":"A stream for this job is already active"}`
+- Heartbeat `: heartbeat` line received after 15 s
+- After client disconnect, reconnect to same job ID succeeds (HTTP 200) — cleanup ran correctly
 
 ---
 

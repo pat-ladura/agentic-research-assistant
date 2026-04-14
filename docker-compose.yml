@@ -41,8 +41,10 @@ services:
       - '3005:3005'
     env_file:
       - ./packages/api/.env
+    environment:
+      - CHOKIDAR_USEPOLLING=true
     volumes:
-      - ./packages/api/src:/app/src # Enable hot reload for source files
+      - ./packages/api/src:/app/packages/api/src # Enable hot reload for source files
     command: pnpm dev # Use dev server with file watching
     depends_on:
       postgres:
