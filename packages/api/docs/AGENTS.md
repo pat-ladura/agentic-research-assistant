@@ -476,7 +476,7 @@ import { getEnv } from '../config/env';
 
 export class GeminiProvider implements AIProvider {
   private client: GoogleGenAI;
-  private model: string = 'gemini-1.5-pro';
+  private model: string = 'gemini-1.5-flash';
   private embeddingModel: string = 'text-embedding-004'; // 768d
 
   constructor() {
@@ -500,7 +500,7 @@ export class GeminiProvider implements AIProvider {
 
     const text = response.text;
     if (!text) throw new Error('No content in Gemini response');
-    logger.debug({ model: this.model }, 'Gemini chat completed');
+    logger.debug({ model: this.model }, 'Gemini chat completed'); // gemini-1.5-flash
     return text;
   }
 

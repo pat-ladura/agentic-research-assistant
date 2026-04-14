@@ -1,58 +1,52 @@
 import { AIProvider } from './provider';
 import { OllamaProvider } from './ollama.provider';
 import { OpenAIProvider } from './openai.provider';
+import { GeminiProvider } from './gemini.provider';
+import { HybridProvider } from './hybrid.provider';
 import { getEnv } from '../config/env';
 import { logger } from '../lib/logger';
 
-export type ProviderType = 'ollama' | 'openai';
+export type ProviderType = 'openai' | 'gemini' | 'ollama';
 
-let cachedProvider: AIProvider | null = null;
+// Cache keyed by provider type — each provider type gets its own singleton
+const providerCache = new Map<ProviderType, AIProvider>();
 
-/**
- * Factory function to create and return an AI provider instance
- * Supports dynamic switching between local (Ollama) and cloud (OpenAI) providers
- *
- * @param providerType - The type of provider to create ('ollama' or 'openai')
- * @returns An instance implementing the AIProvider interface
- */
 export function getAIProvider(providerType: ProviderType = 'openai'): AIProvider {
-  if (cachedProvider) {
-    return cachedProvider;
-  }
+  const cached = providerCache.get(providerType);
+  if (cached) return cached;
 
   let provider: AIProvider;
 
   switch (providerType) {
-    case 'ollama':
-      provider = new OllamaProvider();
-      logger.info('Initialized Ollama AI provider (local)');
-      break;
     case 'openai':
-      provider = new OpenAIProvider();
-      logger.info('Initialized OpenAI provider (cloud)');
+      provider = new HybridProvider(new OpenAIProvider());
+      logger.info('Initialized OpenAI provider with local Ollama offload');
+      break;
+    case 'gemini':
+      provider = new HybridProvider(new GeminiProvider());
+      logger.info('Initialized Gemini provider with local Ollama offload');
+      break;
+    case 'ollama':
+      provider = new HybridProvider(new OllamaProvider({ cloud: true }));
+      logger.info('Initialized Ollama Cloud provider with local Ollama offload');
       break;
     default:
       throw new Error(`Unknown AI provider type: ${providerType}`);
   }
 
-  cachedProvider = provider;
+  providerCache.set(providerType, provider);
   return provider;
 }
 
-/**
- * Reset the cached provider (useful for testing or switching providers)
- */
-export function resetAIProvider() {
-  cachedProvider = null;
+export function resetAIProvider(providerType?: ProviderType) {
+  if (providerType) {
+    providerCache.delete(providerType);
+  } else {
+    providerCache.clear();
+  }
 }
 
-/**
- * Get the default provider based on environment or configuration
- * Can be extended to support environment-based provider selection
- */
 export function getDefaultProvider(): AIProvider {
   const env = getEnv();
-  // Example: you could add an AI_PROVIDER env var to control this
-  // For now, default to OpenAI but can be overridden
   return getAIProvider('openai');
 }
