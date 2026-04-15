@@ -27,7 +27,10 @@ export const researchSessions = pgTable('research_sessions', {
   provider: text('provider').notNull().default('openai'), // 'openai' | 'gemini' | 'ollama'
   embeddingModel: text('embedding_model').notNull().default('text-embedding-3-small'),
   embeddingDimensions: integer('embedding_dimensions').notNull().default(1536),
+  status: text('status').notNull().default('pending'), // 'pending' | 'running' | 'completed' | 'failed'
+  result: text('result'), // final synthesized report
   createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
 /**
@@ -84,9 +87,8 @@ export const memoryEntries = pgTable('memory_entries', {
   step: text('step'), // which step this message belongs to
   sequenceOrder: integer('sequence_order').notNull(),
   embeddingModel: text('embedding_model').notNull(), // track which model created this
-  embeddingOpenAI: vector('embedding_openai', { dimensions: 1536 }),
-  embeddingGemini: vector('embedding_gemini', { dimensions: 768 }),
-  embeddingOllama: vector('embedding_ollama', { dimensions: 768 }),
+  embedding: vector('embedding', { dimensions: 1536 }),       // OpenAI text-embedding-3-small
+  embeddingSmall: vector('embedding_small', { dimensions: 768 }), // Gemini text-embedding-004 / Ollama nomic-embed-text
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -101,9 +103,8 @@ export const documents = pgTable('documents', {
   title: text('title').notNull(),
   content: text('content').notNull(),
   embeddingModel: text('embedding_model').notNull(), // track which model created this
-  embeddingOpenAI: vector('embedding_openai', { dimensions: 1536 }),
-  embeddingGemini: vector('embedding_gemini', { dimensions: 768 }),
-  embeddingOllama: vector('embedding_ollama', { dimensions: 768 }),
+  embedding: vector('embedding', { dimensions: 1536 }),       // OpenAI text-embedding-3-small
+  embeddingSmall: vector('embedding_small', { dimensions: 768 }), // Gemini text-embedding-004 / Ollama nomic-embed-text
   source: text('source'), // URL, file name, etc.
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
