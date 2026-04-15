@@ -3,17 +3,29 @@ import { AIProvider, ChatMessage } from './provider';
 import { logger } from '../lib/logger';
 import { getEnv } from '../config/env';
 
+export interface OllamaConfig {
+  cloud?: boolean; // true = Ollama Cloud, false/undefined = local
+}
+
 export class OllamaProvider implements AIProvider {
   private client: Ollama;
-  private model: string = 'llama2'; // Default model, can be configurable
-  private baseUrl: string;
+  private model: string;
+  private embeddingModel: string = 'nomic-embed-text';
 
-  constructor() {
+  constructor(config: OllamaConfig = {}) {
     const env = getEnv();
-    this.baseUrl = env.OLLAMA_BASE_URL;
-    // Set environment variable for Ollama client
-    process.env.OLLAMA_HOST = this.baseUrl;
-    this.client = new Ollama();
+    if (config.cloud) {
+      if (!env.OLLAMA_CLOUD_BASE_URL) throw new Error('OLLAMA_CLOUD_BASE_URL is not set');
+      this.model = 'qwen3.5:397b';
+      this.client = new Ollama({
+        host: env.OLLAMA_CLOUD_BASE_URL,
+        headers: env.OLLAMA_API_KEY ? { Authorization: `Bearer ${env.OLLAMA_API_KEY}` } : {},
+      });
+    } else {
+      // local — low-reason offload
+      this.model = 'llama3';
+      this.client = new Ollama({ host: env.OLLAMA_BASE_URL });
+    }
   }
 
   async chat(messages: ChatMessage[], systemPrompt?: string): Promise<string> {
@@ -41,11 +53,11 @@ export class OllamaProvider implements AIProvider {
   async embed(text: string): Promise<number[]> {
     try {
       const response = await this.client.embeddings({
-        model: this.model,
+        model: this.embeddingModel,
         prompt: text,
       });
 
-      logger.debug({ model: this.model }, 'Ollama embedding generated');
+      logger.debug({ model: this.embeddingModel }, 'Ollama embedding generated');
       return response.embedding;
     } catch (error) {
       logger.error(error, 'Ollama embedding failed');

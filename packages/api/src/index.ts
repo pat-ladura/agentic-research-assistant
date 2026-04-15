@@ -4,6 +4,8 @@ import { createApp, startServer } from './app';
 import { logger } from './lib/logger';
 import { closeDb } from './config/database';
 import { getQueueProvider } from './queue';
+import { emitJobProgress } from './queue/job-events';
+import { ResearcherAgent } from './ai/researcher.agent';
 
 async function main() {
   try {
@@ -15,8 +17,16 @@ async function main() {
     const queue = getQueueProvider();
     await queue.start();
     queue.onJob('research-job', async (data, jobId) => {
-      logger.info({ jobId, sessionId: data.sessionId }, 'Processing research job (placeholder)');
-      // Phase 3 will replace this
+      const agent = new ResearcherAgent(jobId, data.provider);
+      try {
+        const report = await agent.run(data.query);
+        logger.info({ jobId, sessionId: data.sessionId }, 'Research job completed');
+        // Phase 5 will persist report and memory to DB
+        void report;
+      } catch (error) {
+        emitJobProgress({ jobId, step: 'agent', status: 'failed', message: String(error) });
+        logger.error({ jobId, error }, 'Research job failed');
+      }
     });
 
     process.on('SIGTERM', async () => {

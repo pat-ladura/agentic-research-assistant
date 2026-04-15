@@ -1,6 +1,6 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import { logger } from '../lib/logger';
-import { sendSuccess, sendError, sendNotFound, ErrorCode } from '../lib/api-response';
+import { sendSuccess, sendError, ErrorCode } from '../lib/api-response';
 import { getQueueProvider } from '../queue';
 import { jobEmitter, type JobProgressEvent } from '../queue/job-events';
 
@@ -8,8 +8,11 @@ import { jobEmitter, type JobProgressEvent } from '../queue/job-events';
 const SSE_HEARTBEAT_MS = 15_000; // ping every 15 s to detect dead connections
 const SSE_MAX_TTL_MS = 10 * 60_000; // hard-close after 10 min to prevent zombie connections
 
-// 1 SSE connection per job — prevents duplicate listener accumulation
-const activeJobStreams = new Map<string, boolean>();
+// Stores cleanup fn per jobId — evict stale connections on reconnect instead of rejecting
+const activeJobStreams = new Map<string, () => void>();
+
+// Cache terminal events so reconnecting clients see the final result immediately
+const completedJobCache = new Map<string, JobProgressEvent>();
 
 const router: Router = Router();
 
@@ -54,7 +57,7 @@ router.post('/sessions', (req: Request, res: Response, next: NextFunction) => {
  * Retrieve a specific research session
  */
 router.get('/sessions/:id', (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = req.params['id'] as string;
   logger.info({ id }, 'Fetching research session');
   return sendSuccess(res, {
     id,
@@ -95,10 +98,14 @@ router.post('/query', async (req: Request, res: Response, next: NextFunction) =>
 
 /**
  * GET /api/research/jobs/:id
- * Polling fallback — returns current job status
+ * Polling fallback — returns current job status and cached result if completed
  */
 router.get('/jobs/:id', (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = req.params['id'] as string;
+  const cached = completedJobCache.get(id);
+  if (cached) {
+    return sendSuccess(res, { jobId: id, status: cached.status, result: cached.data });
+  }
   // Phase 5 will query the DB for real status/result
   return sendSuccess(res, { jobId: id, status: 'processing' });
 });
@@ -107,20 +114,35 @@ router.get('/jobs/:id', (req: Request, res: Response) => {
  * GET /api/research/jobs/:id/stream
  * SSE endpoint — streams real-time job progress events.
  *
- * Guardrails:
- *  - 1 active SSE connection per jobId (409 if duplicate)
- *  - heartbeat comment every 15 s to detect dead TCP connections
- *  - hard TTL of 10 min — auto-closes zombie connections
- *  - auto-closes on terminal job events (completed / failed)
- *  - idempotent cleanup via `closed` flag (prevents double-remove of listener)
+ * Reconnect-safe:
+ *  - If job already completed, replays the terminal event immediately and closes
+ *  - If a stale connection exists (e.g. browser navigated away), evicts it and accepts new one
+ *  - Heartbeat every 15 s to detect dead TCP connections through proxies
+ *  - Hard TTL of 10 min — auto-closes zombie connections
+ *  - Auto-closes on terminal job events (completed / failed)
+ *  - Idempotent cleanup via closed flag
  */
 router.get('/jobs/:id/stream', (req: Request, res: Response) => {
   const id = req.params['id'] as string;
 
-  // Guardrail: reject duplicate SSE connections for the same job
-  if (activeJobStreams.get(id)) {
-    res.status(409).json({ error: 'A stream for this job is already active' });
+  // If job already done, replay terminal event immediately — no listener needed
+  const cachedResult = completedJobCache.get(id);
+  if (cachedResult) {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+    res.write(`data: ${JSON.stringify(cachedResult)}\n\n`);
+    res.end();
+    logger.debug({ jobId: id }, 'SSE stream: replayed cached terminal event');
     return;
+  }
+
+  // Evict stale connection (e.g. user navigated away and came back during active job)
+  const existingCleanup = activeJobStreams.get(id);
+  if (existingCleanup) {
+    logger.debug({ jobId: id }, 'SSE stream: evicting stale connection for reconnect');
+    existingCleanup();
   }
 
   res.setHeader('Content-Type', 'text/event-stream');
@@ -129,10 +151,10 @@ router.get('/jobs/:id/stream', (req: Request, res: Response) => {
   res.flushHeaders();
 
   // Disable Nagle's algorithm so small writes (heartbeats, events) are sent immediately
-  // without waiting to buffer into larger TCP segments
   req.socket?.setNoDelay(true);
+  // Swallow socket errors (ECONNRESET) from writes to disconnected clients
+  req.socket?.on('error', () => { cleanup(); });
 
-  activeJobStreams.set(id, true);
   logger.debug({ jobId: id }, 'SSE stream opened');
 
   let closed = false;
@@ -147,12 +169,15 @@ router.get('/jobs/:id/stream', (req: Request, res: Response) => {
     logger.debug({ jobId: id }, 'SSE stream closed');
   };
 
+  activeJobStreams.set(id, cleanup);
+
   const onProgress = (event: JobProgressEvent) => {
     if (closed) return;
     res.write(`data: ${JSON.stringify(event)}\n\n`);
 
-    // Auto-close on terminal status — job is done, no more events
+    // Cache terminal event and close — reconnecting clients will get it immediately
     if (event.status === 'completed' || event.status === 'failed') {
+      completedJobCache.set(id, event);
       cleanup();
       res.end();
     }
@@ -160,8 +185,7 @@ router.get('/jobs/:id/stream', (req: Request, res: Response) => {
 
   jobEmitter.on(id, onProgress);
 
-  // Heartbeat: SSE comment line keeps the connection alive through proxies/load balancers
-  // and surfaces dead TCP connections faster than OS TCP keepalive
+  // Heartbeat: keeps connection alive through proxies/load balancers
   const heartbeat = setInterval(() => {
     if (!closed) res.write(': heartbeat\n\n');
   }, SSE_HEARTBEAT_MS);
@@ -176,12 +200,13 @@ router.get('/jobs/:id/stream', (req: Request, res: Response) => {
         message: 'Stream TTL exceeded — reconnect and check job status via GET /jobs/:id',
       };
       res.write(`data: ${JSON.stringify(timeoutEvent)}\n\n`);
+      completedJobCache.set(id, timeoutEvent);
       cleanup();
       res.end();
     }
   }, SSE_MAX_TTL_MS);
 
-  // Client disconnect: clean up immediately so the listener and map entry are released
+  // Client disconnect: clean up so listener and map entry are released
   req.on('close', cleanup);
 });
 

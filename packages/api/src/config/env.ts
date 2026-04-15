@@ -6,8 +6,11 @@ const EnvSchema = z.object({
   DRIZZLE_DATABASE_URL: z.url('Invalid DRIZZLE_DATABASE_URL'),
   API_KEY: z.string().min(1, 'API_KEY is required'),
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
-  OPENAI_API_KEY: z.string().min(1, 'OPENAI_API_KEY is required'),
+  OPENAI_API_KEY: z.string().optional(),
+  GEMINI_API_KEY: z.string().optional(),
+  OLLAMA_API_KEY: z.string().optional(),
   OLLAMA_BASE_URL: z.url('Invalid OLLAMA_BASE_URL').default('http://localhost:11434'),
+  OLLAMA_CLOUD_BASE_URL: z.url('Invalid OLLAMA_CLOUD_BASE_URL').optional(),
   NODE_ENV: z.enum(['development', 'production']).default('development'),
 });
 

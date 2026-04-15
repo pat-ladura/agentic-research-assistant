@@ -423,6 +423,12 @@ Add Gemini as a first-class provider alongside OpenAI and Ollama. Implement a `H
 pnpm add @google/genai
 ```
 
+**`tsconfig.json`** — add `customConditions` so TypeScript resolves `@google/genai` node exports under `moduleResolution: bundler`:
+
+```json
+"customConditions": ["node"]
+```
+
 ### Files to modify
 
 **`src/config/env.ts`** — add Gemini key and Ollama Cloud env vars
@@ -444,19 +450,21 @@ export interface OllamaConfig {
 
 export class OllamaProvider implements AIProvider {
   private client: Ollama;
-  private model: string = 'llama3';
+  private model: string; // assigned per-instance: cloud='qwen3.5:397b', local='llama3'
   private embeddingModel: string = 'nomic-embed-text';
 
   constructor(config: OllamaConfig = {}) {
     const env = getEnv();
     if (config.cloud) {
       if (!env.OLLAMA_CLOUD_BASE_URL) throw new Error('OLLAMA_CLOUD_BASE_URL is not set');
+      this.model = 'qwen3.5:397b'; // Ollama Cloud model (tag required — no default)
       this.client = new Ollama({
         host: env.OLLAMA_CLOUD_BASE_URL,
         headers: env.OLLAMA_API_KEY ? { Authorization: `Bearer ${env.OLLAMA_API_KEY}` } : {},
       });
     } else {
-      // local — do NOT mutate process.env, pass host directly
+      // local — low-reason offload, do NOT mutate process.env
+      this.model = 'llama3';
       this.client = new Ollama({ host: env.OLLAMA_BASE_URL });
     }
   }
@@ -476,7 +484,7 @@ import { getEnv } from '../config/env';
 
 export class GeminiProvider implements AIProvider {
   private client: GoogleGenAI;
-  private model: string = 'gemini-1.5-pro';
+  private model: string = 'gemini-2.5-flash';
   private embeddingModel: string = 'text-embedding-004'; // 768d
 
   constructor() {
@@ -494,13 +502,13 @@ export class GeminiProvider implements AIProvider {
 
     const response = await this.client.models.generateContent({
       model: this.model,
-      systemInstruction: systemPrompt,
       contents: geminiMessages,
+      config: { systemInstruction: systemPrompt },
     });
 
     const text = response.text;
     if (!text) throw new Error('No content in Gemini response');
-    logger.debug({ model: this.model }, 'Gemini chat completed');
+    logger.debug({ model: this.model }, 'Gemini chat completed'); // gemini-2.5-flash
     return text;
   }
 
@@ -571,6 +579,10 @@ import { GeminiProvider } from './gemini.provider';
 
 export type ProviderType = 'openai' | 'gemini' | 'ollama';
 
+// Cache keyed by provider type — each type gets its own singleton
+// (Single global cache caused gemini/ollama jobs to silently use the first-initialized provider)
+const providerCache = new Map<ProviderType, AIProvider>();
+
 // In switch — every case wraps its provider in HybridProvider:
 case 'openai':
   provider = new HybridProvider(new OpenAIProvider());
@@ -607,13 +619,15 @@ const summaries = await this.think(
 );
 ```
 
-### Validation
+### Validation ✅ (verified)
 
-- Set `GEMINI_API_KEY`, `OLLAMA_API_KEY`, `OLLAMA_CLOUD_BASE_URL` in `.env`
-- Submit queries with each of the three `provider` values: `"openai"`, `"gemini"`, `"ollama"`
-- For all three providers: confirm logs show local Ollama handling the summarize step and the selected provider handling decompose/synthesize
-- Stop local Ollama, resubmit with any provider — confirm all steps fall back to the selected primary without crashing
-- Confirm `provider: "ollama"` routes high-reason steps to Ollama Cloud and low-reason to local Ollama
+- All three `provider` values return HTTP 202 + `jobId`
+- Logs show `Initialized OpenAI/Gemini/Ollama Cloud provider with local Ollama offload` per provider type
+- `WARN: Local Ollama unavailable, falling back to primary` appears when local Ollama is down
+- Gemini provider: uses `gemini-2.5-flash` (v1beta API; `gemini-1.5-flash` not available on this key)
+- Ollama Cloud: model tag must be explicit — `qwen3.5:397b` (no default tag for `qwen3.5`)
+- Ollama Cloud URL: `https://ollama.com` (not `api.ollama.ai`) per official docs
+- Provider cache bug fixed: use `Map<ProviderType, AIProvider>` — single global cached the first provider, causing gemini/ollama jobs to silently use OpenAI
 
 ---
 
@@ -645,28 +659,43 @@ export const researchSessions = pgTable('research_sessions', {
 });
 ```
 
-Note: `vector('embedding', { dimensions: 1536 })` on the documents table is hardcoded by Drizzle.
-Use `dimensions: 1536` (max of OpenAI/Ollama) and store actual dimensions in the session.
-Ollama nomic-embed-text produces 768d — zero-pad or leave remaining dimensions as 0 is NOT recommended.
-**Better approach**: use two separate nullable vector columns or restrict similarity search by session's `embeddingModel`.
+Note: embedding dimensions differ per provider:
+- OpenAI `text-embedding-3-small` → **1536d**
+- Ollama `nomic-embed-text` → **768d**
+- Gemini `text-embedding-004` → **768d**
 
-**Simplest pragmatic approach for hackathon**: keep `dimensions: 1536` for OpenAI sessions, and for Ollama sessions (`nomic-embed-text`, 768d) store a separate `embeddingSmall: vector('embedding_small', { dimensions: 768 })` column.
+Zero-padding is NOT recommended.
+
+**Pragmatic approach for hackathon**: two nullable vector columns — `embedding` (1536d, OpenAI) and `embeddingSmall` (768d, Ollama + Gemini). Scope similarity search by `embeddingModel` stored on the session so the correct column is queried.
+
+Embedding model defaults per provider:
+- `openai` → `text-embedding-3-small` (1536d) → use `embedding` column
+- `gemini` → `text-embedding-004` (768d) → use `embeddingSmall` column
+- `ollama` → `nomic-embed-text` (768d) → use `embeddingSmall` column
 
 ### Files to modify
 
-**`src/ai/ollama.provider.ts`** — use dedicated embedding model
+**`src/ai/ollama.provider.ts`** — already done in Phase 4: `embeddingModel = 'nomic-embed-text'` is separate from chat model, and `embed()` uses it. No further changes needed.
+
+### Additional file to update
+
+**`src/routes/research.routes.ts`** — `GET /jobs/:id` already returns `completedJobCache` result from Phase 4 reconnect fix. When adding DB persistence, **extend** rather than replace:
 
 ```ts
-private model: string = 'llama3';
-private embeddingModel: string = 'nomic-embed-text'; // separate model for embeddings
-
-async embed(text: string): Promise<number[]> {
-  const response = await this.client.embeddings({
-    model: this.embeddingModel, // use nomic-embed-text, not llama3
-    prompt: text,
-  });
-  return response.embedding;
-}
+router.get('/jobs/:id', async (req, res) => {
+  const id = req.params['id'] as string;
+  // 1. Check in-memory cache first (fast path for jobs completed in this process)
+  const cached = completedJobCache.get(id);
+  if (cached) {
+    return sendSuccess(res, { jobId: id, status: cached.status, result: cached.data });
+  }
+  // 2. Fall back to DB (survives server restarts)
+  const session = await db.query.researchSessions.findFirst({ where: eq(researchSessions.jobId, id) });
+  if (session) {
+    return sendSuccess(res, { jobId: id, status: session.status, result: session.result });
+  }
+  return sendSuccess(res, { jobId: id, status: 'processing' });
+});
 ```
 
 ### Run migration
@@ -680,8 +709,10 @@ pnpm db:migrate
 
 - Schema migration runs without errors
 - `researchSessions` table has `embedding_model`, `embedding_dimensions`, `status`, `result` columns
-- `documents` table has both vector columns
+- `documents` table has both vector columns (`embedding` 1536d, `embedding_small` 768d)
 - `embed()` call on OllamaProvider uses `nomic-embed-text` (confirm in Ollama logs)
+- `embed()` call on GeminiProvider uses `text-embedding-004`
+- `GET /jobs/:id` returns result from DB after server restart (not just in-memory cache)
 
 ---
 
@@ -712,11 +743,14 @@ export async function retrieveRelevantChunks(
   const embeddingLiteral = `[${queryEmbedding.join(',')}]`;
 
   // pgvector cosine distance — lower = more similar
+  // Use embedding_small column for 768d providers (Gemini, Ollama); embedding for OpenAI (1536d)
+  const is768d = queryEmbedding.length === 768;
+  const vectorCol = is768d ? 'embedding_small' : 'embedding';
   const results = await db
     .select({ content: documents.content })
     .from(documents)
     .where(eq(documents.sessionId, sessionId))
-    .orderBy(sql`embedding <=> ${embeddingLiteral}::vector`)
+    .orderBy(sql`${sql.identifier(vectorCol)} <=> ${embeddingLiteral}::vector`)
     .limit(topK);
 
   return results.map((r) => r.content);
@@ -759,7 +793,7 @@ if (relevantChunks.length > 0) {
 
 1. **Never import a concrete provider class outside `src/ai/`** — routes and workers always use `getAIProvider()`
 2. **Never query embeddings across sessions** — always scope similarity search by `sessionId`
-3. **Provider cache in `getAIProvider()` must be reset via `resetAIProvider()` when switching providers per request** — the current cache is global; consider making it per-request if users can switch mid-session
+3. **Provider cache in `getAIProvider()` is keyed by `ProviderType`** — `resetAIProvider(type?)` clears one or all. Each job instantiates its provider by type; no per-request reset needed unless keys change at runtime
 4. **SSE connections must clean up event listeners on `req.close`** — already noted in Phase 2
 5. **pg-boss schema tables are managed by pg-boss itself** — do not create them manually via Drizzle
 6. **Local Ollama is always the low-reason offload target** — if unavailable, `HybridProvider` falls back to the primary provider silently. Never crash on Ollama unavailability
