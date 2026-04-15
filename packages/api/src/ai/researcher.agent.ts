@@ -104,6 +104,7 @@ export class ResearcherAgent {
       systemPrompt
     );
     this.emit('decompose', 'progress', 'Sub-questions identified', { subQuestions });
+    this.emit('decompose', 'completed', 'Decomposition complete', { subQuestions });
 
     // Step 2: Search queries
     this.emit('search', 'started', 'Generating search queries');
@@ -113,6 +114,7 @@ export class ResearcherAgent {
       systemPrompt
     );
     this.emit('search', 'progress', 'Search queries generated', { searchQueries });
+    this.emit('search', 'completed', 'Search queries ready', { searchQueries });
 
     // Step 3: Summarize — low-reason, offloads to local Ollama
     this.emit('summarize', 'started', 'Summarizing available context');
@@ -123,6 +125,7 @@ export class ResearcherAgent {
       true // lowReason — offloads to local Ollama
     );
     this.emit('summarize', 'progress', 'Summaries complete', { summaries });
+    this.emit('summarize', 'completed', 'Summaries ready', { summaries });
 
     // RAG: inject relevant document chunks before synthesis if session has stored documents
     if (this.sessionId !== null) {
