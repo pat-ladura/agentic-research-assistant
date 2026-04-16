@@ -27,11 +27,6 @@ export async function createApp(): Promise<Application> {
   // Apply general rate limiter globally
   app.use(generalLimiter);
 
-  // Health check route (no auth required)
-  app.get('/health', (_req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
-  });
-
   // Swagger documentation (dynamic import for ESM compatibility)
   try {
     const swaggerUi = await import('swagger-ui-express');
@@ -40,21 +35,29 @@ export async function createApp(): Promise<Application> {
     logger.warn('Swagger UI not available, skipping /api-docs');
   }
 
-  // API Key middleware - required for all /api routes
-  app.use('/api/', apiKeyMiddleware);
-
   // Conditional JWT middleware - apply to all /api routes except /auth and /user/register
   const conditionalJwtMiddleware = (req: Request, res: Response, next: NextFunction) => {
     const path = req.path;
     // Skip JWT for /auth and /user/register endpoints
-    if (path.startsWith('/auth') || path === '/user/register') {
+    if (path.startsWith('/auth') || path === '/user/register' || path.startsWith('/health')) {
       return next();
     }
     // Apply JWT for all other routes
     return jwtMiddleware(req, res, next);
   };
 
-  app.use('/api/', conditionalJwtMiddleware);
+  // Conditional API Key middleware - apply to all /api routes except /health and /user/register
+  const conditionalApiKeyMiddleware = (req: Request, res: Response, next: NextFunction) => {
+    const path = req.path;
+    // Skip API key check for /health and /user/register endpoints
+    if (path.startsWith('/health')) {
+      return next();
+    }
+    // Apply API key check for all other routes
+    return apiKeyMiddleware(req, res, next);
+  };
+
+  app.use('/api/', conditionalApiKeyMiddleware, conditionalJwtMiddleware);
   app.use('/api/research', aiLimiter);
 
   // Application routes
