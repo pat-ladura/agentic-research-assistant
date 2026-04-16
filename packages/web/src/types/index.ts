@@ -25,7 +25,14 @@ export interface ZodIssue {
 export interface ApiErrorResponse {
   success: false;
   error: {
-    code: 'VALIDATION_ERROR' | 'UNAUTHORIZED' | 'FORBIDDEN' | 'NOT_FOUND' | 'CONFLICT' | 'INTERNAL_ERROR' | 'SERVICE_UNAVAILABLE';
+    code:
+      | 'VALIDATION_ERROR'
+      | 'UNAUTHORIZED'
+      | 'FORBIDDEN'
+      | 'NOT_FOUND'
+      | 'CONFLICT'
+      | 'INTERNAL_ERROR'
+      | 'SERVICE_UNAVAILABLE';
     message: string;
     details?: ZodIssue[];
   };

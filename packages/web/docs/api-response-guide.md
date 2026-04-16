@@ -36,31 +36,31 @@ Every JSON response (success **and** error) shares the same top-level shape:
 
 ## HTTP Status Code Reference
 
-| Status | Meaning | `success` |
-|--------|---------|-----------|
-| `200 OK` | Request fulfilled | `true` |
-| `201 Created` | Resource created | `true` |
-| `202 Accepted` | Job queued (async) | `true` |
-| `400 Bad Request` | Validation or missing fields | `false` |
-| `401 Unauthorized` | Missing / invalid token or credentials | `false` |
-| `403 Forbidden` | Authenticated but not allowed | `false` |
-| `404 Not Found` | Resource does not exist | `false` |
-| `409 Conflict` | Duplicate resource (e.g. email taken) | `false` |
-| `500 Internal Server Error` | Unexpected server failure | `false` |
+| Status                      | Meaning                                | `success` |
+| --------------------------- | -------------------------------------- | --------- |
+| `200 OK`                    | Request fulfilled                      | `true`    |
+| `201 Created`               | Resource created                       | `true`    |
+| `202 Accepted`              | Job queued (async)                     | `true`    |
+| `400 Bad Request`           | Validation or missing fields           | `false`   |
+| `401 Unauthorized`          | Missing / invalid token or credentials | `false`   |
+| `403 Forbidden`             | Authenticated but not allowed          | `false`   |
+| `404 Not Found`             | Resource does not exist                | `false`   |
+| `409 Conflict`              | Duplicate resource (e.g. email taken)  | `false`   |
+| `500 Internal Server Error` | Unexpected server failure              | `false`   |
 
 ---
 
 ## Error Code Reference
 
-| `error.code` | HTTP Status | When |
-|---|---|---|
-| `VALIDATION_ERROR` | 400 | Missing fields, type mismatches, Zod failures |
-| `UNAUTHORIZED` | 401 | No JWT / revoked JWT / wrong password |
-| `FORBIDDEN` | 403 | Authenticated but lacks permission |
-| `NOT_FOUND` | 404 | Session, job, or user does not exist |
-| `CONFLICT` | 409 | Email already registered |
-| `INTERNAL_ERROR` | 500 | Unhandled server exceptions |
-| `SERVICE_UNAVAILABLE` | 503 | Downstream dependency unavailable |
+| `error.code`          | HTTP Status | When                                          |
+| --------------------- | ----------- | --------------------------------------------- |
+| `VALIDATION_ERROR`    | 400         | Missing fields, type mismatches, Zod failures |
+| `UNAUTHORIZED`        | 401         | No JWT / revoked JWT / wrong password         |
+| `FORBIDDEN`           | 403         | Authenticated but lacks permission            |
+| `NOT_FOUND`           | 404         | Session, job, or user does not exist          |
+| `CONFLICT`            | 409         | Email already registered                      |
+| `INTERNAL_ERROR`      | 500         | Unhandled server exceptions                   |
+| `SERVICE_UNAVAILABLE` | 503         | Downstream dependency unavailable             |
 
 ---
 
@@ -71,11 +71,13 @@ Every JSON response (success **and** error) shares the same top-level shape:
 #### `POST /api/auth/login`
 
 **Request**
+
 ```json
 { "email": "user@example.com", "password": "secret" }
 ```
 
 **200 OK**
+
 ```json
 {
   "success": true,
@@ -88,6 +90,7 @@ Every JSON response (success **and** error) shares the same top-level shape:
 ```
 
 **400 Validation error** (e.g. invalid email format)
+
 ```json
 {
   "success": false,
@@ -100,6 +103,7 @@ Every JSON response (success **and** error) shares the same top-level shape:
 ```
 
 **401 Wrong credentials**
+
 ```json
 {
   "success": false,
@@ -114,11 +118,13 @@ Every JSON response (success **and** error) shares the same top-level shape:
 Requires `Authorization: Bearer <token>` header.
 
 **200 OK**
+
 ```json
 { "success": true, "data": null, "message": "Logout successful" }
 ```
 
 **401 Not authenticated**
+
 ```json
 {
   "success": false,
@@ -133,11 +139,13 @@ Requires `Authorization: Bearer <token>` header.
 #### `POST /api/user/register`
 
 **Request**
+
 ```json
 { "firstName": "Jane", "lastName": "Doe", "email": "jane@example.com", "password": "min8chars" }
 ```
 
 **201 Created**
+
 ```json
 {
   "success": true,
@@ -149,6 +157,7 @@ Requires `Authorization: Bearer <token>` header.
 ```
 
 **400 Validation error**
+
 ```json
 {
   "success": false,
@@ -161,6 +170,7 @@ Requires `Authorization: Bearer <token>` header.
 ```
 
 **409 Email already registered**
+
 ```json
 {
   "success": false,
@@ -175,8 +185,16 @@ Requires `Authorization: Bearer <token>` header.
 #### `GET /api/research/sessions`
 
 **200 OK**
+
 ```json
-{ "success": true, "data": { "sessions": [ /* session objects */ ] } }
+{
+  "success": true,
+  "data": {
+    "sessions": [
+      /* session objects */
+    ]
+  }
+}
 ```
 
 ---
@@ -184,11 +202,13 @@ Requires `Authorization: Bearer <token>` header.
 #### `POST /api/research/sessions`
 
 **Request**
+
 ```json
 { "title": "Quantum Computing Overview" }
 ```
 
 **201 Created**
+
 ```json
 {
   "success": true,
@@ -198,6 +218,7 @@ Requires `Authorization: Bearer <token>` header.
 ```
 
 **400 Missing title**
+
 ```json
 {
   "success": false,
@@ -210,6 +231,7 @@ Requires `Authorization: Bearer <token>` header.
 #### `GET /api/research/sessions/:id`
 
 **200 OK**
+
 ```json
 {
   "success": true,
@@ -218,6 +240,7 @@ Requires `Authorization: Bearer <token>` header.
 ```
 
 **404 Not found** (Phase 5, when DB queries are live)
+
 ```json
 {
   "success": false,
@@ -234,6 +257,7 @@ Requires `Authorization: Bearer <token>` header.
 Enqueues a background research job. Returns immediately with a `jobId`.
 
 **Request**
+
 ```json
 { "sessionId": 42, "query": "Explain quantum entanglement", "provider": "openai" }
 ```
@@ -241,6 +265,7 @@ Enqueues a background research job. Returns immediately with a `jobId`.
 Valid `provider` values: `"openai"` | `"gemini"` | `"ollama"`
 
 **202 Accepted**
+
 ```json
 {
   "success": true,
@@ -250,6 +275,7 @@ Valid `provider` values: `"openai"` | `"gemini"` | `"ollama"`
 ```
 
 **400 Missing fields**
+
 ```json
 {
   "success": false,
@@ -264,6 +290,7 @@ Valid `provider` values: `"openai"` | `"gemini"` | `"ollama"`
 Polling fallback for job status.
 
 **200 OK**
+
 ```json
 {
   "success": true,
@@ -291,6 +318,7 @@ interface JobProgressEvent {
 ```
 
 Example stream:
+
 ```
 data: {"jobId":"b3f1","step":"decompose","status":"started","message":"Breaking down the research query"}
 
@@ -306,6 +334,7 @@ data: {"jobId":"b3f1","step":"synthesize","status":"completed","message":"Resear
 #### `GET /api/health/status`
 
 **200 OK**
+
 ```json
 {
   "success": true,
@@ -314,6 +343,7 @@ data: {"jobId":"b3f1","step":"synthesize","status":"completed","message":"Resear
 ```
 
 **500** (DB unavailable)
+
 ```json
 {
   "success": false,
@@ -344,10 +374,7 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(
-  path: string,
-  init: RequestInit = {}
-): Promise<T> {
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem('token');
 
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -362,22 +389,19 @@ async function request<T>(
   const json = await res.json();
 
   if (!json.success) {
-    throw new ApiError(
-      json.error.code,
-      json.error.message,
-      res.status,
-      json.error.details
-    );
+    throw new ApiError(json.error.code, json.error.message, res.status, json.error.details);
   }
 
   return json.data as T;
 }
 
 export const api = {
-  get:    <T>(path: string)                      => request<T>(path),
-  post:   <T>(path: string, body: unknown)       => request<T>(path, { method: 'POST',  body: JSON.stringify(body) }),
-  put:    <T>(path: string, body: unknown)       => request<T>(path, { method: 'PUT',   body: JSON.stringify(body) }),
-  delete: <T>(path: string)                      => request<T>(path, { method: 'DELETE' }),
+  get: <T>(path: string) => request<T>(path),
+  post: <T>(path: string, body: unknown) =>
+    request<T>(path, { method: 'POST', body: JSON.stringify(body) }),
+  put: <T>(path: string, body: unknown) =>
+    request<T>(path, { method: 'PUT', body: JSON.stringify(body) }),
+  delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
 };
 ```
 
@@ -415,7 +439,10 @@ export async function login(email: string, password: string) {
 }
 
 export async function register(payload: {
-  firstName: string; lastName: string; email: string; password: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
 }) {
   // ApiError with code === 'CONFLICT' means email taken (409)
   // ApiError with code === 'VALIDATION_ERROR' means field-level issues (400)
@@ -479,12 +506,13 @@ interface JobProgressEvent {
 ```
 
 **Usage in a React component:**
+
 ```tsx
 async function handleSubmit() {
   try {
     const { jobId } = await submitQuery(sessionId, query, provider);
     const cleanup = streamJobProgress(jobId, (event) => {
-      setSteps(prev => [...prev, event]);
+      setSteps((prev) => [...prev, event]);
       if (event.step === 'synthesize' && event.status === 'completed') {
         setReport((event.data as any).report);
         cleanup(); // close SSE when done
@@ -522,7 +550,7 @@ export function classifyApiError(err: unknown): {
   switch (err.code) {
     case 'VALIDATION_ERROR': {
       const fieldErrors: Record<string, string> = {};
-      (err.details as { path: string[]; message: string }[] ?? []).forEach(d => {
+      ((err.details as { path: string[]; message: string }[]) ?? []).forEach((d) => {
         if (d.path.length > 0) fieldErrors[d.path[0]] = d.message;
       });
       return { userMessage: err.message, shouldLogout: false, fieldErrors };
@@ -530,14 +558,20 @@ export function classifyApiError(err: unknown): {
     case 'UNAUTHORIZED':
       return { userMessage: 'Your session has expired. Please log in again.', shouldLogout: true };
     case 'FORBIDDEN':
-      return { userMessage: 'You do not have permission to perform this action.', shouldLogout: false };
+      return {
+        userMessage: 'You do not have permission to perform this action.',
+        shouldLogout: false,
+      };
     case 'NOT_FOUND':
       return { userMessage: 'The requested resource was not found.', shouldLogout: false };
     case 'CONFLICT':
       return { userMessage: err.message, shouldLogout: false };
     case 'INTERNAL_ERROR':
     default:
-      return { userMessage: 'A server error occurred. Please try again later.', shouldLogout: false };
+      return {
+        userMessage: 'A server error occurred. Please try again later.',
+        shouldLogout: false,
+      };
   }
 }
 ```
@@ -550,13 +584,14 @@ When `error.code === "VALIDATION_ERROR"`, `error.details` is an array of Zod iss
 
 ```ts
 interface ZodIssue {
-  path: (string | number)[];  // field path, e.g. ["email"] or ["password"]
-  message: string;            // human-readable message
-  code: string;               // zod error code, e.g. "too_small"
+  path: (string | number)[]; // field path, e.g. ["email"] or ["password"]
+  message: string; // human-readable message
+  code: string; // zod error code, e.g. "too_small"
 }
 ```
 
 Map them to form state to highlight individual fields:
+
 ```ts
 const fieldErrors = issues.reduce<Record<string, string>>((acc, issue) => {
   const key = issue.path.join('.');

@@ -49,7 +49,10 @@ export async function retrieveRelevantChunks(
       .orderBy(sql`${vectorCol} <=> ${embeddingLiteral}::vector`)
       .limit(topK);
 
-    logger.debug({ sessionId, topK, returned: results.length, dim: queryEmbedding.length }, 'RAG retrieval complete');
+    logger.debug(
+      { sessionId, topK, returned: results.length, dim: queryEmbedding.length },
+      'RAG retrieval complete'
+    );
     return results.map((r) => r.content);
   } catch (err) {
     logger.warn({ sessionId, err }, 'RAG: vector search failed, skipping retrieval');

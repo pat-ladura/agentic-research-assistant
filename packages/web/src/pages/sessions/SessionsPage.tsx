@@ -16,9 +16,7 @@ export default function SessionsPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Research History</h1>
-      {sessions.length === 0 && (
-        <p className="text-muted-foreground">No research sessions yet.</p>
-      )}
+      {sessions.length === 0 && <p className="text-muted-foreground">No research sessions yet.</p>}
       <div className="space-y-3">
         {sessions.map((session) => (
           <Link key={session.id} to={`/sessions/${session.id}`} className="block">

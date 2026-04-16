@@ -10,8 +10,8 @@ import { retrieveRelevantChunks } from './retriever';
 export class ResearcherAgent {
   private memory: ChatMessage[] = [];
   private providerType: ProviderType;
-  private jobId: string;          // pg-boss UUID (used for SSE events)
-  private dbJobId: number | null;  // DB research_jobs.id (used for step persistence)
+  private jobId: string; // pg-boss UUID (used for SSE events)
+  private dbJobId: number | null; // DB research_jobs.id (used for step persistence)
   private sessionId: number | null; // DB research_sessions.id (used for RAG retrieval)
 
   constructor(
@@ -38,7 +38,7 @@ export class ResearcherAgent {
   private async think(
     userMessage: string,
     systemPrompt?: string,
-    lowReason = false,
+    lowReason = false
   ): Promise<string> {
     this.memory.push({ role: 'user', content: userMessage });
     const provider = getAIProvider(this.providerType) as HybridProvider;
@@ -140,7 +140,9 @@ export class ResearcherAgent {
           role: 'assistant',
           content: 'Understood. I will incorporate these excerpts into the synthesis.',
         });
-        this.emit('synthesize', 'progress', 'Retrieved relevant document chunks', { chunkCount: relevantChunks.length });
+        this.emit('synthesize', 'progress', 'Retrieved relevant document chunks', {
+          chunkCount: relevantChunks.length,
+        });
       }
     }
 

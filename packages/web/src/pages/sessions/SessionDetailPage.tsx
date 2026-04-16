@@ -64,9 +64,7 @@ export default function SessionDetailPage() {
           </Badge>
           <Badge variant="outline">{session.provider}</Badge>
         </div>
-        {session.description && (
-          <p className="mt-1 text-muted-foreground">{session.description}</p>
-        )}
+        {session.description && <p className="mt-1 text-muted-foreground">{session.description}</p>}
         <p className="mt-1 text-xs text-muted-foreground">
           {formatDistanceToNow(new Date(session.createdAt), { addSuffix: true })}
         </p>

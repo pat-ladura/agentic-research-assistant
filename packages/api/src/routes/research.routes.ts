@@ -163,7 +163,12 @@ router.post('/query', async (req: Request, res: Response, next: NextFunction) =>
 
     const sessionIdNum = Number(sessionId);
     if (isNaN(sessionIdNum) || sessionIdNum <= 0) {
-      return sendError(res, 400, ErrorCode.VALIDATION_ERROR, 'sessionId must be a positive integer');
+      return sendError(
+        res,
+        400,
+        ErrorCode.VALIDATION_ERROR,
+        'sessionId must be a positive integer'
+      );
     }
 
     const queue = getQueueProvider();
@@ -333,7 +338,9 @@ router.get('/jobs/:id/stream', async (req: Request, res: Response) => {
   }
 
   // Swallow socket errors (ECONNRESET) from writes to disconnected clients
-  req.socket?.on('error', () => { cleanup(); });
+  req.socket?.on('error', () => {
+    cleanup();
+  });
 
   logger.debug({ jobId: id }, 'SSE stream opened');
 
@@ -358,7 +365,10 @@ router.get('/jobs/:id/stream', async (req: Request, res: Response) => {
     // Cache terminal event and close — reconnecting clients will get it immediately.
     // Only treat synthesize/completed as the job-terminal event; individual step
     // completions must not close the stream prematurely.
-    if ((event.step === 'synthesize' && event.status === 'completed') || event.status === 'failed') {
+    if (
+      (event.step === 'synthesize' && event.status === 'completed') ||
+      event.status === 'failed'
+    ) {
       completedJobCache.set(id, event);
       cleanup();
       res.end();

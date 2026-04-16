@@ -1,5 +1,5 @@
-import { apiClient } from "./client";
-import type { AuthResponse, ApiResponse } from "@/types";
+import { apiClient } from './client';
+import type { AuthResponse, ApiResponse } from '@/types';
 
 export interface LoginResult {
   success: boolean;
@@ -15,7 +15,7 @@ export const authApi = {
   login: async (email: string, password: string): Promise<LoginResult> => {
     try {
       const response = await apiClient
-        .post("auth/login", { json: { email, password } })
+        .post('auth/login', { json: { email, password } })
         .json<ApiResponse<AuthResponse>>();
 
       if (response.success && response.data) {
@@ -33,16 +33,16 @@ export const authApi = {
       return {
         success: false,
         error: {
-          code: "INTERNAL_ERROR",
-          message: "Unexpected response format",
+          code: 'INTERNAL_ERROR',
+          message: 'Unexpected response format',
         },
       };
     } catch (error: any) {
       return {
         success: false,
         error: {
-          code: "INTERNAL_ERROR",
-          message: error?.message || "An unexpected error occurred",
+          code: 'INTERNAL_ERROR',
+          message: error?.message || 'An unexpected error occurred',
         },
       };
     }
@@ -50,9 +50,7 @@ export const authApi = {
 
   logout: async () => {
     try {
-      const response = await apiClient
-        .post("auth/logout")
-        .json<ApiResponse<null>>();
+      const response = await apiClient.post('auth/logout').json<ApiResponse<null>>();
 
       if (response.success) {
         return { success: true };
@@ -66,16 +64,16 @@ export const authApi = {
       return {
         success: false,
         error: {
-          code: "INTERNAL_ERROR",
-          message: "Unexpected response format",
+          code: 'INTERNAL_ERROR',
+          message: 'Unexpected response format',
         },
       };
     } catch (error: any) {
       return {
         success: false,
         error: {
-          code: "INTERNAL_ERROR",
-          message: error?.message || "An unexpected error occurred",
+          code: 'INTERNAL_ERROR',
+          message: error?.message || 'An unexpected error occurred',
         },
       };
     }
