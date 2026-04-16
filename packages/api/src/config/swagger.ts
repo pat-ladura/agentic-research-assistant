@@ -61,6 +61,22 @@ const options = {
             },
           },
         },
+        ResearchSession: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            userId: { type: 'integer' },
+            title: { type: 'string' },
+            description: { type: 'string', nullable: true },
+            provider: { type: 'string', enum: ['openai', 'gemini', 'ollama'] },
+            embeddingModel: { type: 'string' },
+            embeddingDimensions: { type: 'integer' },
+            status: { type: 'string', enum: ['pending', 'running', 'completed', 'failed'] },
+            result: { type: 'string', nullable: true },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
       },
     },
     tags: [

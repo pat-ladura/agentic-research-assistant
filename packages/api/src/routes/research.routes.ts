@@ -20,8 +20,30 @@ const completedJobCache = new Map<string, JobProgressEvent>();
 const router: Router = Router();
 
 /**
- * GET /api/research/sessions
- * Retrieve all research sessions for the authenticated user
+ * @swagger
+ * /api/research/sessions:
+ *   get:
+ *     summary: List all research sessions
+ *     description: Retrieve all research sessions for the authenticated user, ordered by creation date descending.
+ *     tags:
+ *       - Research
+ *     security:
+ *       - BearerAuth: []
+ *       - ApiKeyAuth: []
+ *     responses:
+ *       200:
+ *         description: List of research sessions
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 sessions:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/ResearchSession'
+ *       401:
+ *         description: Unauthorized
  */
 router.get('/sessions', async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -44,8 +66,47 @@ const EMBEDDING_DEFAULTS: Record<string, { model: string; dimensions: number }> 
 };
 
 /**
- * POST /api/research/sessions
- * Create a new research session
+ * @swagger
+ * /api/research/sessions:
+ *   post:
+ *     summary: Create a research session
+ *     description: Creates a new research session. Embedding model and dimensions are auto-selected based on the provider.
+ *     tags:
+ *       - Research
+ *     security:
+ *       - BearerAuth: []
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 example: Climate Change Research
+ *               description:
+ *                 type: string
+ *                 example: Exploring the latest findings on climate change
+ *               provider:
+ *                 type: string
+ *                 enum: [openai, gemini, ollama]
+ *                 default: openai
+ *                 example: openai
+ *     responses:
+ *       201:
+ *         description: Research session created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ResearchSession'
+ *       400:
+ *         description: Missing required field title
+ *       401:
+ *         description: Unauthorized
  */
 router.post('/sessions', async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -79,8 +140,36 @@ router.post('/sessions', async (req: Request, res: Response, next: NextFunction)
 });
 
 /**
- * GET /api/research/sessions/:id
- * Retrieve a specific research session (scoped to authenticated user)
+ * @swagger
+ * /api/research/sessions/{id}:
+ *   get:
+ *     summary: Get a research session
+ *     description: Retrieve a specific research session by ID, scoped to the authenticated user.
+ *     tags:
+ *       - Research
+ *     security:
+ *       - BearerAuth: []
+ *       - ApiKeyAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Research session ID
+ *     responses:
+ *       200:
+ *         description: Research session details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ResearchSession'
+ *       400:
+ *         description: Invalid session id
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Session not found
  */
 router.get('/sessions/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -104,8 +193,50 @@ router.get('/sessions/:id', async (req: Request, res: Response, next: NextFuncti
 });
 
 /**
- * GET /api/research/sessions/:id/jobs
- * Returns the most recent job for a session — provides the jobId needed to reconnect to SSE.
+ * @swagger
+ * /api/research/sessions/{id}/jobs:
+ *   get:
+ *     summary: Get latest job for a session
+ *     description: Returns the most recent job for a session. Use the returned jobId to reconnect to the SSE stream.
+ *     tags:
+ *       - Research
+ *     security:
+ *       - BearerAuth: []
+ *       - ApiKeyAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Research session ID
+ *     responses:
+ *       200:
+ *         description: Most recent job for the session
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 jobId:
+ *                   type: string
+ *                   description: pg-boss job ID (use for SSE stream)
+ *                 sessionId:
+ *                   type: integer
+ *                 status:
+ *                   type: string
+ *                   enum: [pending, processing, completed, failed]
+ *                 query:
+ *                   type: string
+ *                 createdAt:
+ *                   type: string
+ *                   format: date-time
+ *       400:
+ *         description: Invalid session id
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Session not found or no jobs exist for this session
  */
 router.get('/sessions/:id/jobs', async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -145,8 +276,59 @@ router.get('/sessions/:id/jobs', async (req: Request, res: Response, next: NextF
 });
 
 /**
- * POST /api/research/query
- * Submit a research query — returns jobId immediately (Phase 1: queue)
+ * @swagger
+ * /api/research/query:
+ *   post:
+ *     summary: Submit a research query
+ *     description: Enqueues a research query for async processing. Returns a jobId immediately. Use the SSE stream endpoint to receive real-time progress.
+ *     tags:
+ *       - Research
+ *     security:
+ *       - BearerAuth: []
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - sessionId
+ *               - query
+ *             properties:
+ *               sessionId:
+ *                 type: integer
+ *                 description: ID of the research session to associate this query with
+ *                 example: 1
+ *               query:
+ *                 type: string
+ *                 description: The research question or topic to investigate
+ *                 example: What are the latest breakthroughs in quantum computing?
+ *               provider:
+ *                 type: string
+ *                 enum: [openai, gemini, ollama]
+ *                 default: openai
+ *                 example: openai
+ *     responses:
+ *       202:
+ *         description: Query accepted and queued for processing
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 jobId:
+ *                   type: string
+ *                   description: Use this ID to subscribe to the SSE stream
+ *                 sessionId:
+ *                   type: integer
+ *                 status:
+ *                   type: string
+ *                   example: queued
+ *       400:
+ *         description: Missing or invalid required fields
+ *       401:
+ *         description: Unauthorized
  */
 router.post('/query', async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -194,8 +376,42 @@ router.post('/query', async (req: Request, res: Response, next: NextFunction) =>
 });
 
 /**
- * GET /api/research/jobs/:id
- * Polling fallback — checks in-memory cache first, then DB (survives server restarts)
+ * @swagger
+ * /api/research/jobs/{id}:
+ *   get:
+ *     summary: Get job status (polling fallback)
+ *     description: Returns the current status and result of a research job. Checks in-memory cache first, then falls back to the database. Use this as a polling alternative when SSE is not available.
+ *     tags:
+ *       - Research
+ *     security:
+ *       - BearerAuth: []
+ *       - ApiKeyAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: pg-boss job ID returned from POST /api/research/query
+ *     responses:
+ *       200:
+ *         description: Job status and result
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 jobId:
+ *                   type: string
+ *                 status:
+ *                   type: string
+ *                   enum: [pending, processing, completed, failed]
+ *                 result:
+ *                   type: string
+ *                   nullable: true
+ *                   description: Final synthesized research report (only present when status is completed)
+ *       401:
+ *         description: Unauthorized
  */
 router.get('/jobs/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -229,18 +445,51 @@ router.get('/jobs/:id', async (req: Request, res: Response, next: NextFunction) 
 });
 
 /**
- * GET /api/research/jobs/:id/stream
- * SSE endpoint — streams real-time job progress events.
+ * @swagger
+ * /api/research/jobs/{id}/stream:
+ *   get:
+ *     summary: Stream job progress via SSE
+ *     description: |
+ *       Server-Sent Events stream for real-time research job progress.
  *
- * Reconnect-safe:
- *  - Replays completed steps from DB on every connect (handles reload, navigation, restarts)
- *  - If job already fully completed/failed in DB, replays all steps + terminal event then closes
- *  - If a stale connection exists (e.g. browser navigated away), evicts it and accepts new one
- *  - Heartbeat every 15 s to detect dead TCP connections through proxies
- *  - Hard TTL of 10 min — auto-closes zombie connections
- *  - Auto-closes on terminal job events (completed / failed)
- *  - Idempotent cleanup via closed flag
- *  - SSE retry directive set to 1000 ms for fast reconnect
+ *       **Reconnect-safe behaviour:**
+ *       - Replays all completed/running steps from DB on every connect (handles page reload, navigation, server restarts)
+ *       - If the job already completed or failed, replays all steps and the terminal event, then closes immediately
+ *       - Evicts any stale connection for the same jobId when a new client connects
+ *       - Heartbeat comment frame sent every 15 s to keep the connection alive through proxies
+ *       - Hard TTL of 10 min — auto-closes zombie connections
+ *       - SSE `retry` directive set to 1000 ms for fast client reconnect
+ *
+ *       **Event shape** (`data` field, JSON):
+ *       ```json
+ *       { "jobId": "string", "step": "string", "status": "started|completed|failed", "message": "string", "data": {} }
+ *       ```
+ *
+ *       **Terminal events** that close the stream:
+ *       - `{ step: "synthesize", status: "completed" }` — job finished, `data.report` contains the result
+ *       - `{ status: "failed" }` — job failed
+ *     tags:
+ *       - Research
+ *     security:
+ *       - BearerAuth: []
+ *       - ApiKeyAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: pg-boss job ID returned from POST /api/research/query
+ *     responses:
+ *       200:
+ *         description: SSE stream of job progress events
+ *         content:
+ *           text/event-stream:
+ *             schema:
+ *               type: string
+ *               example: "data: {\"jobId\":\"abc\",\"step\":\"decompose\",\"status\":\"started\",\"message\":\"decompose in progress\"}\n\n"
+ *       401:
+ *         description: Unauthorized
  */
 router.get('/jobs/:id/stream', async (req: Request, res: Response) => {
   const id = req.params['id'] as string;
