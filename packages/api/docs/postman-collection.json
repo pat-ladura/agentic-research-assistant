@@ -1,0 +1,407 @@
+{
+  "info": {
+    "_postman_id": "agentic-research-api",
+    "name": "Agentic Research Assistant API",
+    "description": "API collection for the Agentic Research Assistant. Set `baseUrl` and `apiKey` variables before running.\n\nAuthentication flow:\n1. Register or Login → token auto-saved to `token` variable\n2. Research endpoints use Bearer token automatically",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3005",
+      "type": "string"
+    },
+    {
+      "key": "apiKey",
+      "value": "your-api-key-here",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sessionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "jobId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "key": "key",
+        "value": "x-api-key",
+        "type": "string"
+      },
+      {
+        "key": "value",
+        "value": "{{apiKey}}",
+        "type": "string"
+      },
+      {
+        "key": "in",
+        "value": "header",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Status",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health", "status"]
+            },
+            "description": "Check API and database connectivity."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "User",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  if (body.data && body.data.token) {",
+                  "    pm.collectionVariables.set('token', body.data.token);",
+                  "  }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"securePassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/user/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "user", "register"]
+            },
+            "description": "Create a new user account. Password must be at least 8 characters."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  if (body.data && body.data.token) {",
+                  "    pm.collectionVariables.set('token', body.data.token);",
+                  "    console.log('Token saved to collection variable: token');",
+                  "  }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"securePassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Authenticate with email and password. JWT token is auto-saved to the `token` collection variable."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('token', '');",
+                  "  console.log('Token cleared');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "logout"]
+            },
+            "description": "Revoke the current JWT token. Clears the `token` variable on success."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Research",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{token}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "Sessions",
+          "item": [
+            {
+              "name": "List Sessions",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/research/sessions",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "research", "sessions"]
+                },
+                "description": "Retrieve all research sessions for the authenticated user, ordered by creation date descending."
+              },
+              "response": []
+            },
+            {
+              "name": "Create Session",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 201) {",
+                      "  const body = pm.response.json();",
+                      "  if (body.data && body.data.id) {",
+                      "    pm.collectionVariables.set('sessionId', body.data.id);",
+                      "    console.log('Session ID saved: ' + body.data.id);",
+                      "  }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"My Research Session\",\n  \"description\": \"Researching AI trends in 2025\",\n  \"provider\": \"openai\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/research/sessions",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "research", "sessions"]
+                },
+                "description": "Create a new research session. `provider` can be `openai`, `gemini`, or `ollama`. Session ID is auto-saved to `sessionId` variable."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Session",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/research/sessions/{{sessionId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "research", "sessions", "{{sessionId}}"]
+                },
+                "description": "Retrieve a specific research session by ID. Scoped to authenticated user."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Session Latest Job",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "  const body = pm.response.json();",
+                      "  if (body.data && body.data.jobId) {",
+                      "    pm.collectionVariables.set('jobId', body.data.jobId);",
+                      "    console.log('Job ID saved: ' + body.data.jobId);",
+                      "  }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/research/sessions/{{sessionId}}/jobs",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "research", "sessions", "{{sessionId}}", "jobs"]
+                },
+                "description": "Returns the most recent job for a session. Provides the `jobId` needed to connect to the SSE stream. Job ID is auto-saved to `jobId` variable."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Jobs",
+          "item": [
+            {
+              "name": "Submit Query",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 202) {",
+                      "  const body = pm.response.json();",
+                      "  if (body.data && body.data.jobId) {",
+                      "    pm.collectionVariables.set('jobId', body.data.jobId);",
+                      "    console.log('Job ID saved: ' + body.data.jobId);",
+                      "  }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"sessionId\": {{sessionId}},\n  \"query\": \"What are the latest advancements in quantum computing?\",\n  \"provider\": \"openai\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/research/query",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "research", "query"]
+                },
+                "description": "Submit a research query. Returns a `jobId` immediately (202 Accepted). Poll `/jobs/:id` or connect to `/jobs/:id/stream` for progress. Job ID is auto-saved to `jobId` variable."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Job Status",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/research/jobs/{{jobId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "research", "jobs", "{{jobId}}"]
+                },
+                "description": "Polling fallback to check job status and result. Checks in-memory cache first, then DB. Returns `status` and `result` (final report) when completed."
+              },
+              "response": []
+            },
+            {
+              "name": "Stream Job Progress (SSE)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "text/event-stream"
+                  },
+                  {
+                    "key": "Cache-Control",
+                    "value": "no-cache"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/research/jobs/{{jobId}}/stream",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "research", "jobs", "{{jobId}}", "stream"]
+                },
+                "description": "Server-Sent Events (SSE) stream for real-time job progress.\n\nEvent shape:\n```json\n{ \"jobId\": \"...\", \"step\": \"retrieve|synthesize|...\", \"status\": \"started|completed|failed\", \"message\": \"...\", \"data\": {} }\n```\n\nBehavior:\n- Replays completed steps from DB on reconnect\n- Heartbeat every 15s (keeps connection alive through proxies)\n- Hard TTL of 10 minutes\n- Auto-closes on terminal events (completed/failed)\n- Reconnect directive: `retry: 1000`\n\n**Note:** Postman has limited SSE support. Use a browser or dedicated SSE client (e.g., `curl -N`) for full streaming."
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

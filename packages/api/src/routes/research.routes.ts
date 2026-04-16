@@ -104,6 +104,47 @@ router.get('/sessions/:id', async (req: Request, res: Response, next: NextFuncti
 });
 
 /**
+ * GET /api/research/sessions/:id/jobs
+ * Returns the most recent job for a session — provides the jobId needed to reconnect to SSE.
+ */
+router.get('/sessions/:id/jobs', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const sessionId = parseInt(req.params['id'] as string, 10);
+    if (isNaN(sessionId)) {
+      return sendError(res, 400, ErrorCode.VALIDATION_ERROR, 'Invalid session id');
+    }
+    const db = getDb();
+    // Verify session ownership
+    const [session] = await db
+      .select()
+      .from(researchSessions)
+      .where(eq(researchSessions.id, sessionId))
+      .limit(1);
+    if (!session || session.userId !== req.user!.id) {
+      return sendError(res, 404, ErrorCode.NOT_FOUND, 'Session not found');
+    }
+    const [job] = await db
+      .select()
+      .from(researchJobs)
+      .where(eq(researchJobs.sessionId, sessionId))
+      .orderBy(desc(researchJobs.createdAt))
+      .limit(1);
+    if (!job) {
+      return sendError(res, 404, ErrorCode.NOT_FOUND, 'No jobs found for this session');
+    }
+    return sendSuccess(res, {
+      jobId: job.pgBossJobId,
+      sessionId: job.sessionId,
+      status: job.status,
+      query: job.query,
+      createdAt: job.createdAt,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * POST /api/research/query
  * Submit a research query — returns jobId immediately (Phase 1: queue)
  */

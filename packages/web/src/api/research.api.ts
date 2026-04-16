@@ -1,6 +1,14 @@
 import { apiClient } from "./client";
 import type { ResearchSession, ResearchJob, ApiResponse } from "@/types";
 
+export interface SessionLatestJob {
+  jobId: string;
+  sessionId: number;
+  status: string;
+  query: string;
+  createdAt: string;
+}
+
 export const researchApi = {
   getSessions: async (): Promise<ResearchSession[]> => {
     try {
@@ -80,6 +88,21 @@ export const researchApi = {
       !response.success && response.error
         ? response.error.message
         : "Failed to fetch job",
+    );
+  },
+
+  getSessionLatestJob: async (sessionId: number): Promise<SessionLatestJob> => {
+    const response = await apiClient
+      .get(`research/sessions/${sessionId}/jobs`)
+      .json<ApiResponse<SessionLatestJob>>();
+
+    if (response.success && response.data) {
+      return response.data;
+    }
+    throw new Error(
+      !response.success && response.error
+        ? response.error.message
+        : "Failed to fetch session job",
     );
   },
 };
