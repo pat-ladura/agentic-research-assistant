@@ -71,7 +71,7 @@ export default function NewResearchPage() {
 
             <div className="space-y-1">
               <Label htmlFor="provider">AI Provider</Label>
-              <Select value={provider} onValueChange={setProvider}>
+              <Select value={provider} onValueChange={(v) => v !== null && setProvider(v)}>
                 <SelectTrigger id="provider">
                   <SelectValue />
                 </SelectTrigger>

@@ -32,11 +32,9 @@ export default function JobDetailPage() {
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex items-center gap-3">
         {sessionId && (
-          <Button variant="ghost" size="sm" asChild>
-            <Link to={`/sessions/${sessionId}`}>
-              <ArrowLeft className="mr-1 h-4 w-4" />
-              Back to Session
-            </Link>
+          <Button variant="ghost" size="sm" render={<Link to={`/sessions/${sessionId}`} />}>
+            <ArrowLeft className="mr-1 h-4 w-4" />
+            Back to Session
           </Button>
         )}
       </div>

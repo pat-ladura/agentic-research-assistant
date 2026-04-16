@@ -48,11 +48,9 @@ export default function SessionDetailPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" asChild>
-          <Link to="/sessions">
-            <ArrowLeft className="mr-1 h-4 w-4" />
-            Back
-          </Link>
+        <Button variant="ghost" size="sm" render={<Link to="/sessions" />}>
+          <ArrowLeft className="mr-1 h-4 w-4" />
+          Back
         </Button>
       </div>
 
