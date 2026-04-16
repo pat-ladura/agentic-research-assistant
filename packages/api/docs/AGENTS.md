@@ -185,6 +185,7 @@ export function emitJobProgress(event: JobProgressEvent): void {
 `GET /api/research/jobs/:id/stream` — SSE endpoint with guardrails
 
 Guardrails implemented (memory-leak prevention):
+
 - **1 connection per job** — `activeJobStreams` Map returns 409 on duplicate
 - **Heartbeat** — SSE comment line every 15 s; surfaces dead TCP connections through proxies
 - **Hard TTL** — 10 min `setTimeout` force-closes zombie connections with a `failed` event
@@ -229,7 +230,8 @@ router.get('/jobs/:id/stream', (req, res) => {
     if (closed) return;
     res.write(`data: ${JSON.stringify(event)}\n\n`);
     if (event.status === 'completed' || event.status === 'failed') {
-      cleanup(); res.end();
+      cleanup();
+      res.end();
     }
   };
 
@@ -241,8 +243,11 @@ router.get('/jobs/:id/stream', (req, res) => {
 
   const ttlTimeout = setTimeout(() => {
     if (!closed) {
-      res.write(`data: ${JSON.stringify({ jobId: id, step: 'stream', status: 'failed', message: 'Stream TTL exceeded' })}\n\n`);
-      cleanup(); res.end();
+      res.write(
+        `data: ${JSON.stringify({ jobId: id, step: 'stream', status: 'failed', message: 'Stream TTL exceeded' })}\n\n`
+      );
+      cleanup();
+      res.end();
     }
   }, SSE_MAX_TTL_MS);
 
@@ -660,6 +665,7 @@ export const researchSessions = pgTable('research_sessions', {
 ```
 
 Note: embedding dimensions differ per provider:
+
 - OpenAI `text-embedding-3-small` → **1536d**
 - Ollama `nomic-embed-text` → **768d**
 - Gemini `text-embedding-004` → **768d**
@@ -669,6 +675,7 @@ Zero-padding is NOT recommended.
 **Pragmatic approach for hackathon**: two nullable vector columns — `embedding` (1536d, OpenAI) and `embeddingSmall` (768d, Ollama + Gemini). Scope similarity search by `embeddingModel` stored on the session so the correct column is queried.
 
 Embedding model defaults per provider:
+
 - `openai` → `text-embedding-3-small` (1536d) → use `embedding` column
 - `gemini` → `text-embedding-004` (768d) → use `embeddingSmall` column
 - `ollama` → `nomic-embed-text` (768d) → use `embeddingSmall` column
@@ -690,7 +697,9 @@ router.get('/jobs/:id', async (req, res) => {
     return sendSuccess(res, { jobId: id, status: cached.status, result: cached.data });
   }
   // 2. Fall back to DB (survives server restarts)
-  const session = await db.query.researchSessions.findFirst({ where: eq(researchSessions.jobId, id) });
+  const session = await db.query.researchSessions.findFirst({
+    where: eq(researchSessions.jobId, id),
+  });
   if (session) {
     return sendSuccess(res, { jobId: id, status: session.status, result: session.result });
   }

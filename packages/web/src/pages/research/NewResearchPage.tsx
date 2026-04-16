@@ -71,7 +71,7 @@ export default function NewResearchPage() {
 
             <div className="space-y-1">
               <Label htmlFor="provider">AI Provider</Label>
-              <Select value={provider} onValueChange={setProvider}>
+              <Select value={provider} onValueChange={(v) => v !== null && setProvider(v)}>
                 <SelectTrigger id="provider">
                   <SelectValue />
                 </SelectTrigger>
@@ -84,7 +84,8 @@ export default function NewResearchPage() {
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                High-reasoning steps use the selected provider. Summarization always uses local Ollama.
+                High-reasoning steps use the selected provider. Summarization always uses local
+                Ollama.
               </p>
             </div>
 

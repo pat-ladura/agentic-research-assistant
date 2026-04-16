@@ -25,7 +25,14 @@ export interface ZodIssue {
 export interface ApiErrorResponse {
   success: false;
   error: {
-    code: 'VALIDATION_ERROR' | 'UNAUTHORIZED' | 'FORBIDDEN' | 'NOT_FOUND' | 'CONFLICT' | 'INTERNAL_ERROR' | 'SERVICE_UNAVAILABLE';
+    code:
+      | 'VALIDATION_ERROR'
+      | 'UNAUTHORIZED'
+      | 'FORBIDDEN'
+      | 'NOT_FOUND'
+      | 'CONFLICT'
+      | 'INTERNAL_ERROR'
+      | 'SERVICE_UNAVAILABLE';
     message: string;
     details?: ZodIssue[];
   };
@@ -40,7 +47,7 @@ export interface ResearchSession {
   description?: string;
   provider: 'openai' | 'gemini' | 'ollama';
   embeddingModel: string;
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  status: 'pending' | 'processing' | 'completed' | 'failed';
   result?: string;
   createdAt: string;
   updatedAt: string;
@@ -51,14 +58,14 @@ export interface ResearchJob {
   sessionId: number;
   pgBossJobId: string;
   query: string;
-  status: 'queued' | 'running' | 'completed' | 'failed';
+  status: 'pending' | 'processing' | 'completed' | 'failed';
   result?: string;
   createdAt: string;
 }
 
 export interface JobProgressEvent {
   jobId: string;
-  step: 'decompose' | 'search' | 'summarize' | 'synthesize' | 'agent';
+  step: 'decompose' | 'search' | 'summarize' | 'synthesize' | 'agent' | 'stream';
   status: 'started' | 'progress' | 'completed' | 'failed';
   message: string;
   data?: {
@@ -66,5 +73,6 @@ export interface JobProgressEvent {
     searchQueries?: string;
     summaries?: string;
     report?: string;
+    chunkCount?: number;
   };
 }

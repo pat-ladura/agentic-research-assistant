@@ -214,4 +214,3 @@ The application uses Pino for structured JSON logging. Logs are pretty-printed i
 ## 📄 Design Document
 
 For architecture decisions, phase-by-phase implementation plan, and system design details, see the [Design Document](https://docs.google.com/document/d/11rSkNOKnMKpk8A2TJ1UzcBPQpkfQdzwgMEzCojZqJ94/edit?usp=drive_link).
-

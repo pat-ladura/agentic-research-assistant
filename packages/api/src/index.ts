@@ -91,12 +91,16 @@ async function main() {
           .update(researchJobs)
           .set({ status: 'failed', updatedAt: new Date() })
           .where(eq(researchJobs.pgBossJobId, jobId))
-          .catch((dbErr) => logger.error({ jobId, dbErr }, 'Failed to update job status to failed'));
+          .catch((dbErr) =>
+            logger.error({ jobId, dbErr }, 'Failed to update job status to failed')
+          );
         await db
           .update(researchSessions)
           .set({ status: 'failed', updatedAt: new Date() })
           .where(eq(researchSessions.id, data.sessionId))
-          .catch((dbErr) => logger.error({ jobId, dbErr }, 'Failed to update session status to failed'));
+          .catch((dbErr) =>
+            logger.error({ jobId, dbErr }, 'Failed to update session status to failed')
+          );
       }
     });
 

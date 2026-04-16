@@ -10,8 +10,8 @@ import { retrieveRelevantChunks } from './retriever';
 export class ResearcherAgent {
   private memory: ChatMessage[] = [];
   private providerType: ProviderType;
-  private jobId: string;          // pg-boss UUID (used for SSE events)
-  private dbJobId: number | null;  // DB research_jobs.id (used for step persistence)
+  private jobId: string; // pg-boss UUID (used for SSE events)
+  private dbJobId: number | null; // DB research_jobs.id (used for step persistence)
   private sessionId: number | null; // DB research_sessions.id (used for RAG retrieval)
 
   constructor(
@@ -38,7 +38,7 @@ export class ResearcherAgent {
   private async think(
     userMessage: string,
     systemPrompt?: string,
-    lowReason = false,
+    lowReason = false
   ): Promise<string> {
     this.memory.push({ role: 'user', content: userMessage });
     const provider = getAIProvider(this.providerType) as HybridProvider;
@@ -104,6 +104,7 @@ export class ResearcherAgent {
       systemPrompt
     );
     this.emit('decompose', 'progress', 'Sub-questions identified', { subQuestions });
+    this.emit('decompose', 'completed', 'Decomposition complete', { subQuestions });
 
     // Step 2: Search queries
     this.emit('search', 'started', 'Generating search queries');
@@ -113,6 +114,7 @@ export class ResearcherAgent {
       systemPrompt
     );
     this.emit('search', 'progress', 'Search queries generated', { searchQueries });
+    this.emit('search', 'completed', 'Search queries ready', { searchQueries });
 
     // Step 3: Summarize — low-reason, offloads to local Ollama
     this.emit('summarize', 'started', 'Summarizing available context');
@@ -123,6 +125,7 @@ export class ResearcherAgent {
       true // lowReason — offloads to local Ollama
     );
     this.emit('summarize', 'progress', 'Summaries complete', { summaries });
+    this.emit('summarize', 'completed', 'Summaries ready', { summaries });
 
     // RAG: inject relevant document chunks before synthesis if session has stored documents
     if (this.sessionId !== null) {
@@ -137,7 +140,9 @@ export class ResearcherAgent {
           role: 'assistant',
           content: 'Understood. I will incorporate these excerpts into the synthesis.',
         });
-        this.emit('synthesize', 'progress', 'Retrieved relevant document chunks', { chunkCount: relevantChunks.length });
+        this.emit('synthesize', 'progress', 'Retrieved relevant document chunks', {
+          chunkCount: relevantChunks.length,
+        });
       }
     }
 

@@ -21,7 +21,7 @@ const TEST_DOCS = [
   {
     title: 'Rainbow Optics — Double Rainbows',
     content:
-      'A secondary (double) rainbow appears when light reflects twice inside the droplet before exiting. This reverses the colour order — violet is on the outside, red on the inside — and the secondary bow appears at ~51°. The sky between the two bows (Alexander\'s dark band) appears darker because no light is scattered toward the observer from that angular region.',
+      "A secondary (double) rainbow appears when light reflects twice inside the droplet before exiting. This reverses the colour order — violet is on the outside, red on the inside — and the secondary bow appears at ~51°. The sky between the two bows (Alexander's dark band) appears darker because no light is scattered toward the observer from that angular region.",
     source: 'seed-script/optics-advanced',
   },
   {
@@ -60,4 +60,7 @@ async function main() {
   process.exit(0);
 }
 
-main().catch((err) => { console.error(err); process.exit(1); });
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

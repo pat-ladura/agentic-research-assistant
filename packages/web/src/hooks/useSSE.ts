@@ -5,14 +5,23 @@ import type { JobProgressEvent } from '@/types';
 
 const API_KEY = import.meta.env.VITE_API_KEY as string;
 
+export type SSEStatus = 'idle' | 'connecting' | 'live' | 'complete' | 'failed';
+
 export function useSSE(jobId: string | null) {
   const [events, setEvents] = useState<JobProgressEvent[]>([]);
-  const [connected, setConnected] = useState(false);
-  // AbortController lets us cleanly cancel the fetch-based SSE on unmount
+  const [status, setStatus] = useState<SSEStatus>('idle');
+  const [report, setReport] = useState<string | undefined>(undefined);
+  const [failedEvent, setFailedEvent] = useState<JobProgressEvent | undefined>(undefined);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (!jobId) return;
+
+    // Reset state when jobId changes
+    setEvents([]);
+    setStatus('connecting');
+    setReport(undefined);
+    setFailedEvent(undefined);
 
     const ctrl = new AbortController();
     abortRef.current = ctrl;
@@ -27,34 +36,39 @@ export function useSSE(jobId: string | null) {
       },
       onopen: async (res) => {
         if (res.ok) {
-          setConnected(true);
+          setStatus('live');
         } else {
-          // Non-2xx — throw so onerror fires
           throw new Error(`SSE open failed: ${res.status}`);
         }
       },
       onmessage: (msg) => {
-        // Skip heartbeat comment lines (empty data)
         if (!msg.data) return;
         try {
           const event: JobProgressEvent = JSON.parse(msg.data);
           setEvents((prev) => [...prev, event]);
+
+          if (event.step === 'synthesize' && event.status === 'completed') {
+            setReport(event.data?.report);
+            setStatus('complete');
+          } else if (event.status === 'failed') {
+            setFailedEvent(event);
+            setStatus('failed');
+          }
         } catch {
           // malformed frame — ignore
         }
       },
       onerror: () => {
-        setConnected(false);
-        // Throw to stop automatic retry — the server sends a terminal event on job end
+        setStatus((prev) => (prev === 'complete' || prev === 'failed' ? prev : 'failed'));
+        // Throw to stop automatic retry — server sends terminal event on job end
         throw new Error('SSE error');
       },
     });
 
     return () => {
       ctrl.abort();
-      setConnected(false);
     };
   }, [jobId]);
 
-  return { events, connected };
+  return { events, status, report, failedEvent };
 }

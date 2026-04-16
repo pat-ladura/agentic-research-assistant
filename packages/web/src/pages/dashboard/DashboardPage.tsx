@@ -28,7 +28,9 @@ export default function DashboardPage() {
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Sessions</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total Sessions
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">{sessions.length}</p>
@@ -44,16 +46,21 @@ export default function DashboardPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Providers Used</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Providers Used
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-1">
-              {usedProviders.length > 0
-                ? usedProviders.map((p: any) => (
-                    <Badge key={p} variant="outline">{p}</Badge>
-                  ))
-                : <span className="text-sm text-muted-foreground">None yet</span>
-              }
+              {usedProviders.length > 0 ? (
+                usedProviders.map((p: any) => (
+                  <Badge key={p} variant="outline">
+                    {p}
+                  </Badge>
+                ))
+              ) : (
+                <span className="text-sm text-muted-foreground">None yet</span>
+              )}
             </div>
           </CardContent>
         </Card>
