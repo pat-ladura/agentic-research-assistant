@@ -39,7 +39,7 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-sm p-3">
-        <CardHeader className='text-center py-8'>
+        <CardHeader className="text-center py-8">
           <CardTitle className="flex justify-center text-primary">
             <BotMessageSquare size={60} />
           </CardTitle>
@@ -54,7 +54,7 @@ export default function LoginPage() {
                 id="email"
                 type="email"
                 value={email}
-                className='h-10'
+                className="h-10"
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
@@ -65,7 +65,7 @@ export default function LoginPage() {
                 id="password"
                 type="password"
                 value={password}
-                className='h-10'
+                className="h-10"
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
