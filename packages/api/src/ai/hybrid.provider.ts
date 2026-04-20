@@ -29,7 +29,11 @@ export class HybridProvider implements AIProvider {
   }
 
   async embed(text: string): Promise<number[]> {
-    // embeddings always from selected provider
+    // Ollama primary → embeddings use local Ollama (nomic-embed-text)
+    // OpenAI / Gemini primary → embeddings use their respective cloud provider
+    if (this.primary instanceof OllamaProvider) {
+      return this.local.embed(text);
+    }
     return this.primary.embed(text);
   }
 

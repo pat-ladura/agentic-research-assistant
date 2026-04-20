@@ -7,6 +7,7 @@ import { closeDb, getDb } from './config/database';
 import { getQueueProvider } from './queue';
 import { emitJobProgress } from './queue/job-events';
 import { ResearcherAgent } from './ai/researcher.agent';
+import { getAIProvider } from './ai/index';
 import { researchJobs, memoryEntries, researchSessions } from './db/schema';
 
 async function main() {
@@ -55,7 +56,7 @@ async function main() {
           .where(eq(researchJobs.pgBossJobId, jobId))
           .returning({ id: researchJobs.id });
 
-        // Persist conversation memory (no embeddings yet — Phase 6 adds RAG)
+        // Persist conversation memory with embeddings
         if (updated) {
           const embeddingModelMap: Record<string, string> = {
             openai: 'text-embedding-3-small',
@@ -65,15 +66,31 @@ async function main() {
           const embModel = embeddingModelMap[data.provider] ?? 'text-embedding-3-small';
           const memory = agent.getMemory();
           if (memory.length > 0) {
-            await db.insert(memoryEntries).values(
-              memory.map((msg, idx) => ({
-                jobId: updated.id,
-                role: msg.role,
-                content: msg.content,
-                sequenceOrder: idx,
-                embeddingModel: embModel,
-              }))
+            const provider = getAIProvider(data.provider as 'openai' | 'gemini' | 'ollama');
+            const rows = await Promise.all(
+              memory.map(async (msg, idx) => {
+                let embedding: number[] | null = null;
+                try {
+                  embedding = await provider.embed(msg.content);
+                } catch (err) {
+                  logger.warn(
+                    { jobId, idx, err },
+                    'Failed to embed memory entry, storing without embedding'
+                  );
+                }
+                const is768d = embedding && embedding.length === 768;
+                return {
+                  jobId: updated.id,
+                  role: msg.role,
+                  content: msg.content,
+                  sequenceOrder: idx,
+                  embeddingModel: embModel,
+                  embedding: !is768d && embedding ? embedding : null,
+                  embeddingSmall: is768d && embedding ? embedding : null,
+                };
+              })
             );
+            await db.insert(memoryEntries).values(rows);
           }
         }
 

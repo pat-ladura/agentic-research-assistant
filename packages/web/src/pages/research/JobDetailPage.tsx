@@ -54,7 +54,7 @@ export default function JobDetailPage() {
             <CardTitle>Research Report</CardTitle>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-[500px] pr-4">
+            <ScrollArea className="h-125 pr-4">
               <div className="prose prose-sm dark:prose-invert max-w-none">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{report}</ReactMarkdown>
               </div>
