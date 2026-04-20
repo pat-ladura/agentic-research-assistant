@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { authApi } from '@/api/auth.api';
 import { useAuthStore } from '@/store/auth.store';
+import { BotMessageSquare } from 'lucide-react';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -37,18 +38,23 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle className="text-2xl">Research Assistant</CardTitle>
+      <Card className="w-full max-w-sm p-3">
+        <CardHeader className='text-center py-8'>
+          <CardTitle className="flex justify-center text-primary">
+            <BotMessageSquare size={60} />
+          </CardTitle>
+          <CardTitle className="text-4xl tracking-widest">AGENTIC</CardTitle>
+          <CardTitle className="text-md -mt-1.25">RESEARCH ASSISTANT</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4 mb-5">
             <div className="space-y-1">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
                 value={email}
+                className='h-10'
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
@@ -59,12 +65,13 @@ export default function LoginPage() {
                 id="password"
                 type="password"
                 value={password}
+                className='h-10'
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full h-10" disabled={loading}>
               {loading ? 'Signing in...' : 'Sign In'}
             </Button>
           </form>
