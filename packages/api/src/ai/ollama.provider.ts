@@ -52,13 +52,13 @@ export class OllamaProvider implements AIProvider {
 
   async embed(text: string): Promise<number[]> {
     try {
-      const response = await this.client.embeddings({
+      const response = await this.client.embed({
         model: this.embeddingModel,
-        prompt: text,
+        input: text,
       });
 
       logger.debug({ model: this.embeddingModel }, 'Ollama embedding generated');
-      return response.embedding;
+      return response.embeddings[0];
     } catch (error) {
       logger.error(error, 'Ollama embedding failed');
       throw new Error(
