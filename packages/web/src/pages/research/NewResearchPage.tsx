@@ -15,9 +15,9 @@ import {
 import { researchApi } from '@/api/research.api';
 
 const PROVIDERS = [
-  { value: 'openai', label: 'OpenAI (GPT-4o)' },
-  { value: 'gemini', label: 'Google Gemini 1.5 Pro' },
-  { value: 'ollama', label: 'Ollama Cloud (llama3)' },
+  { value: 'openai', label: 'OpenAI (gpt-4o-mini)' },
+  { value: 'gemini', label: 'Google Gemini 2.5 Flash' },
+  { value: 'ollama', label: 'Ollama Cloud (qwen3.5:397b)' },
 ];
 
 export default function NewResearchPage() {
@@ -62,6 +62,7 @@ export default function NewResearchPage() {
               <Label htmlFor="title">Session Title</Label>
               <Input
                 id="title"
+                className="h-10"
                 placeholder="e.g. Latest advances in quantum computing"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -72,12 +73,12 @@ export default function NewResearchPage() {
             <div className="space-y-1">
               <Label htmlFor="provider">AI Provider</Label>
               <Select value={provider} onValueChange={(v) => v !== null && setProvider(v)}>
-                <SelectTrigger id="provider">
+                <SelectTrigger id="provider" className="h-10! cursor-pointer">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="py-2 px-2 w-full">
                   {PROVIDERS.map((p) => (
-                    <SelectItem key={p.value} value={p.value}>
+                    <SelectItem key={p.value} className="cursor-pointer" value={p.value}>
                       {p.label}
                     </SelectItem>
                   ))}
@@ -93,6 +94,7 @@ export default function NewResearchPage() {
               <Label htmlFor="query">Research Query</Label>
               <Textarea
                 id="query"
+                className="h-24"
                 placeholder="What do you want to research?"
                 rows={4}
                 value={query}
@@ -103,7 +105,7 @@ export default function NewResearchPage() {
 
             {error && <p className="text-sm text-destructive">{error}</p>}
 
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full h-10" disabled={loading}>
               {loading ? 'Starting...' : 'Start Research'}
             </Button>
           </form>
