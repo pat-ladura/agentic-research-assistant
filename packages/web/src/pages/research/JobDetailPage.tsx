@@ -46,7 +46,7 @@ export default function JobDetailPage() {
 
       <div className="flex items-center gap-3">
         <h1 className="text-2xl font-bold">{title}</h1>
-        <Badge variant="default" className={status === 'live' ? 'bg-red-500' : ''}>
+        <Badge variant="secondary" className={status === 'live' ? 'bg-red-500' : ''}>
           {status === 'live' && <CircleDot />}
           {status === 'live' ? 'Live' : isComplete ? 'Complete' : 'Connecting...'}
         </Badge>
@@ -71,7 +71,7 @@ export default function JobDetailPage() {
 
       {failedEvent && (
         <Card className="border-destructive">
-          <CardContent className="pt-6">
+          <CardContent>
             <p className="text-sm text-destructive">Research failed: {failedEvent.message}</p>
           </CardContent>
         </Card>

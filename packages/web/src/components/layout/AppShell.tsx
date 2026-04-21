@@ -106,12 +106,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
       </aside>
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 flex flex-col">
         <div className="flex items-center border-b bg-muted/30 px-4 py-3">
           {/* Profile */}
           <ProfileDropdown />
         </div>
-        <div className="content p-6">{children}</div>
+        <div className="content p-6 flex-1 overflow-auto">{children}</div>
       </main>
     </div>
   );

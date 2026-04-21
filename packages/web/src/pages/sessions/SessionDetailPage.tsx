@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
+import { ProviderIcon } from '@/components/ui/provider-icon';
 
 export default function SessionDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -81,7 +82,9 @@ export default function SessionDetailPage() {
           >
             {session.status}
           </Badge>
-          <Badge variant="outline">{session.provider}</Badge>
+          <Badge variant="outline" className="flex items-center gap-1">
+            <ProviderIcon provider={session.provider} /> {session.provider}
+          </Badge>
           {session.status === 'failed' && (
             <Button
               size="sm"
@@ -120,7 +123,7 @@ export default function SessionDetailPage() {
 
       {!session.result && !showLiveProgress && session.status !== 'completed' && (
         <Card>
-          <CardContent className="pt-6">
+          <CardContent>
             <p className="text-sm text-muted-foreground">
               Research is {session.status}. Results will appear here when completed.
             </p>

@@ -5,6 +5,7 @@ import { useAuthStore } from '@/store/auth.store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { ProviderIcon } from '@/components/ui/provider-icon';
 import { FlaskConical, History } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -68,7 +69,12 @@ export default function DashboardPage() {
             <div className="flex flex-wrap gap-1">
               {usedProviders.length > 0 ? (
                 usedProviders.map((p: any) => (
-                  <Badge key={p} variant="outline">
+                  <Badge
+                    key={p}
+                    variant="outline"
+                    className="flex items-center gap-1 text-[14px] p-3"
+                  >
+                    <ProviderIcon provider={p} />
                     {p}
                   </Badge>
                 ))
@@ -109,7 +115,10 @@ export default function DashboardPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline">{session.provider}</Badge>
+                    <Badge variant="outline" className="flex items-center gap-1">
+                      <ProviderIcon provider={session.provider} />
+                      {session.provider}
+                    </Badge>
                     <Badge variant="default" className={getBadgeColor(session.status)}>
                       {session.status}
                     </Badge>

@@ -41,7 +41,7 @@ function StepRow({ step, events }: { step: string; events: JobProgressEvent[] })
           <span className="text-xs text-muted-foreground">{STEP_HINTS[step]}</span>
           {latest && (
             <Badge
-              variant="default"
+              variant="secondary"
               className={latest.status === 'completed' ? 'bg-green-500' : ''}
             >
               {latest.status}

@@ -4,6 +4,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { researchApi } from '@/api/research.api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { ProviderIcon } from '@/components/ui/provider-icon';
 
 export default function SessionsPage() {
   const { data: sessions = [], isLoading } = useQuery({
@@ -42,7 +43,9 @@ export default function SessionsPage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline">{session.provider}</Badge>
+                  <Badge variant="outline" className="flex items-center gap-1">
+                    <ProviderIcon provider={session.provider} /> {session.provider}
+                  </Badge>
                   <Badge variant="default" className={getBadgeColor(session.status)}>
                     {session.status}
                   </Badge>
