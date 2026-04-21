@@ -35,7 +35,7 @@ export default function SessionsPage() {
         {sessions.map((session) => (
           <Link key={session.id} to={`/sessions/${session.id}`} className="block">
             <Card className="cursor-pointer transition-colors hover:bg-muted/50">
-              <CardContent className="flex items-center justify-between py-4">
+              <CardContent className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">{session.title}</p>
                   <p className="text-xs text-muted-foreground">

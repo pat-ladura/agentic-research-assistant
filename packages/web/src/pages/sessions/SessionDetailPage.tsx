@@ -108,7 +108,7 @@ export default function SessionDetailPage() {
         </p>
       </div>
 
-      {showLiveProgress && <StepProgress events={events} />}
+      {showLiveProgress && <StepProgress events={events} status={sseStatus} />}
 
       {session.result && (
         <Card>

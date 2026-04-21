@@ -1,5 +1,6 @@
 import { useParams, useSearchParams, Link } from 'react-router';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { researchApi } from '@/api/research.api';
 import { useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -18,6 +19,12 @@ export default function JobDetailPage() {
   const sessionId = searchParams.get('sessionId');
   const queryClient = useQueryClient();
   const { events, status, report, failedEvent } = useSSE(jobId ?? null);
+
+  const { data: session } = useQuery({
+    queryKey: ['session', sessionId],
+    queryFn: () => researchApi.getSession(Number(sessionId)),
+    enabled: !!sessionId,
+  });
 
   // Invalidate session query when job completes so SessionDetailPage refreshes
   useEffect(() => {
@@ -50,13 +57,13 @@ export default function JobDetailPage() {
 
       <div className="flex items-center gap-3">
         <h1 className="text-2xl font-bold">{title}</h1>
-        <Badge variant="secondary" className={status === 'live' ? 'bg-red-500' : ''}>
-          {status === 'live' && <CircleDot />}
+        <Badge variant="secondary" className={status === 'live' ? 'bg-red-500 text-white' : ''}>
+          {status === 'live' && <CircleDot className='animate-pulse' />}
           {status === 'live' ? 'Live' : isComplete ? 'Complete' : 'Connecting...'}
         </Badge>
       </div>
 
-      <StepProgress events={events} />
+      <StepProgress events={events} status={status} />
 
       {report && (
         <Card>
@@ -71,7 +78,7 @@ export default function JobDetailPage() {
             <ScrollArea className="h-125 pr-4">
               <div ref={printRef} style={{ padding: '20px' }}>
                 <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '24px' }}>
-                  {title}
+                  {session?.title ?? title}
                 </h1>
                 <div className="prose prose-sm dark:prose-invert max-w-none">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{report}</ReactMarkdown>
