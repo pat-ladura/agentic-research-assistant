@@ -93,7 +93,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               to={to}
               className={({ isActive }) =>
                 cn(
-                  'flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors h-10',
+                  'flex items-center gap-2 rounded-md px-3 py-2 text-md transition-colors h-10',
                   isActive
                     ? 'bg-primary text-primary-foreground'
                     : 'hover:bg-muted text-muted-foreground hover:text-foreground'
@@ -106,12 +106,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
       </aside>
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 flex flex-col">
         <div className="flex items-center border-b bg-muted/30 px-4 py-3">
           {/* Profile */}
           <ProfileDropdown />
         </div>
-        <div className="content p-6">{children}</div>
+        <div className="content p-6 flex-1 overflow-auto">{children}</div>
       </main>
     </div>
   );

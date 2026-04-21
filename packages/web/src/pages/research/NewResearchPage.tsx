@@ -105,7 +105,7 @@ export default function NewResearchPage() {
 
             {error && <p className="text-sm text-destructive">{error}</p>}
 
-            <Button type="submit" className="w-full h-10" disabled={loading}>
+            <Button type="submit" className="w-full h-10 cursor-pointer" disabled={loading}>
               {loading ? 'Starting...' : 'Start Research'}
             </Button>
           </form>

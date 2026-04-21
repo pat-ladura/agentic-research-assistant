@@ -194,6 +194,100 @@ router.get('/sessions/:id', async (req: Request, res: Response, next: NextFuncti
 
 /**
  * @swagger
+ * /api/research/sessions/{id}/retry:
+ *   post:
+ *     summary: Retry a failed research session
+ *     description: Re-enqueues the original query for a session that has status 'failed'. Resets session and creates a new job.
+ *     tags:
+ *       - Research
+ *     security:
+ *       - BearerAuth: []
+ *       - ApiKeyAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Research session ID
+ *     responses:
+ *       202:
+ *         description: Retry queued
+ *       400:
+ *         description: Session is not in failed state or has no previous job
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Session not found
+ */
+router.post('/sessions/:id/retry', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const sessionId = parseInt(req.params['id'] as string, 10);
+    if (isNaN(sessionId)) {
+      return sendError(res, 400, ErrorCode.VALIDATION_ERROR, 'Invalid session id');
+    }
+
+    const db = getDb();
+
+    const [session] = await db
+      .select()
+      .from(researchSessions)
+      .where(eq(researchSessions.id, sessionId))
+      .limit(1);
+
+    if (!session || session.userId !== req.user!.id) {
+      return sendError(res, 404, ErrorCode.NOT_FOUND, 'Session not found');
+    }
+
+    if (session.status !== 'failed') {
+      return sendError(res, 400, ErrorCode.VALIDATION_ERROR, 'Only failed sessions can be retried');
+    }
+
+    const [lastJob] = await db
+      .select()
+      .from(researchJobs)
+      .where(eq(researchJobs.sessionId, sessionId))
+      .orderBy(desc(researchJobs.createdAt))
+      .limit(1);
+
+    if (!lastJob) {
+      return sendError(res, 400, ErrorCode.VALIDATION_ERROR, 'No previous job found for session');
+    }
+
+    // Reset session to pending
+    await db
+      .update(researchSessions)
+      .set({ status: 'pending', result: null, updatedAt: new Date() })
+      .where(eq(researchSessions.id, sessionId));
+
+    // Enqueue new job with same query + provider
+    const queue = getQueueProvider();
+    const jobId = await queue.enqueue('research-job', {
+      sessionId,
+      query: lastJob.query,
+      provider: session.provider as 'openai' | 'gemini' | 'ollama',
+    });
+
+    await db.insert(researchJobs).values({
+      sessionId,
+      pgBossJobId: jobId,
+      query: lastJob.query,
+      status: 'pending',
+    });
+
+    logger.info({ jobId, sessionId, query: lastJob.query }, 'Research session retry queued');
+    return sendSuccess(
+      res,
+      { jobId, sessionId, status: 'queued' },
+      { status: 202, message: 'Retry queued for processing' }
+    );
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @swagger
  * /api/research/sessions/{id}/jobs:
  *   get:
  *     summary: Get latest job for a session

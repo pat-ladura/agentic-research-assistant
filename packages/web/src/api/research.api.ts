@@ -87,4 +87,19 @@ export const researchApi = {
       !response.success && response.error ? response.error.message : 'Failed to fetch session job'
     );
   },
+
+  retrySession: async (
+    sessionId: number
+  ): Promise<{ jobId: string; sessionId: number; status: string }> => {
+    const response = await apiClient
+      .post(`research/sessions/${sessionId}/retry`)
+      .json<ApiResponse<{ jobId: string; sessionId: number; status: string }>>();
+
+    if (response.success && response.data) {
+      return response.data;
+    }
+    throw new Error(
+      !response.success && response.error ? response.error.message : 'Failed to retry session'
+    );
+  },
 };

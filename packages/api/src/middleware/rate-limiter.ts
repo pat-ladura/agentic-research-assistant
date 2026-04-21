@@ -1,10 +1,10 @@
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 
 /**
- * General rate limiter: 100 requests per 15 minutes per IP
+ * General rate limiter: 100 requests per minute per IP
  */
 export const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 60 * 1000, // 1 minute
   max: 100, // limit each IP to 100 requests per windowMs
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
@@ -14,11 +14,11 @@ export const generalLimiter = rateLimit({
 });
 
 /**
- * Strict rate limiter for AI endpoints: 20 requests per 15 minutes per IP
+ * Strict rate limiter for AI endpoints: 20 requests per 5 minutes per IP
  * Applied to resource-intensive AI operations
  */
 export const aiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 5 * 60 * 1000, // 5 minutes
   max: 20, // limit each IP to 20 requests per windowMs
   message: 'Too many AI requests from this IP, please try again later.',
   standardHeaders: true,
