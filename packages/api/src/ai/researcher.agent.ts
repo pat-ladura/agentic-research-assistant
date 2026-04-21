@@ -5,7 +5,9 @@ import { HybridProvider, ChatOptions } from './hybrid.provider';
 import { emitJobProgress } from '../queue/job-events';
 import { getDb } from '../config/database';
 import { researchSteps, stepResults } from '../db/schema';
-import { retrieveRelevantChunks } from './retriever';
+import { retrieveRelevantChunks, storeDocumentChunk } from './retriever';
+import { getEnv } from '../config/env';
+import { logger } from '../lib/logger';
 
 export class ResearcherAgent {
   private memory: ChatMessage[] = [];
@@ -93,6 +95,76 @@ export class ResearcherAgent {
     }
   }
 
+  /**
+   * Parse a numbered list produced by the AI ("1. ...", "2) ...") into individual strings.
+   */
+  private parseNumberedList(text: string): string[] {
+    return text
+      .split('\n')
+      .map((line) => line.replace(/^\d+[.)\s]+/, '').trim())
+      .filter((q) => q.length > 10); // skip header lines / empty entries
+  }
+
+  /**
+   * For each generated search query, call Tavily and persist the top results as
+   * document chunks in the `documents` table (scoped to this session).
+   * Skips entirely if TAVILY_API_KEY is not configured.
+   */
+  private async fetchAndStoreWebResults(searchQueriesText: string): Promise<void> {
+    const { TAVILY_API_KEY } = getEnv();
+    if (!TAVILY_API_KEY || this.sessionId === null) return;
+
+    const queries = this.parseNumberedList(searchQueriesText);
+    if (queries.length === 0) return;
+
+    const provider = getAIProvider(this.providerType);
+    let stored = 0;
+
+    for (const query of queries) {
+      try {
+        const res = await fetch('https://api.tavily.com/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            api_key: TAVILY_API_KEY,
+            query,
+            max_results: 3,
+            include_answer: false,
+          }),
+        });
+
+        if (!res.ok) {
+          logger.warn({ query, status: res.status }, 'Tavily search returned non-OK status');
+          continue;
+        }
+
+        const data = (await res.json()) as {
+          results: Array<{ title: string; url: string; content: string }>;
+        };
+
+        for (const result of data.results ?? []) {
+          if (!result.content) continue;
+          await storeDocumentChunk(
+            this.sessionId!,
+            result.title ?? query,
+            result.content,
+            result.url ?? query,
+            provider,
+            this.providerType
+          );
+          stored++;
+        }
+      } catch (err) {
+        logger.warn({ query, err }, 'Web search fetch failed, skipping query');
+      }
+    }
+
+    if (stored > 0) {
+      this.emit('search', 'progress', `Stored ${stored} web source chunks for RAG`, { stored });
+      logger.debug({ sessionId: this.sessionId, stored }, 'Web source chunks persisted');
+    }
+  }
+
   async run(query: string): Promise<string> {
     const systemPrompt = `You are an expert research assistant. Be precise, cite reasoning, and structure your output clearly.`;
 
@@ -114,6 +186,11 @@ export class ResearcherAgent {
       systemPrompt
     );
     this.emit('search', 'progress', 'Search queries generated', { searchQueries });
+
+    // Fetch real web content for each generated query and store as document chunks.
+    // The RAG step before synthesis will retrieve these to ground the final report.
+    await this.fetchAndStoreWebResults(searchQueries);
+
     this.emit('search', 'completed', 'Search queries ready', { searchQueries });
 
     // Step 3: Summarize — low-reason, offloads to local Ollama

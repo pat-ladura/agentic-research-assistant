@@ -9,6 +9,7 @@ const EnvSchema = z.object({
   OPENAI_API_KEY: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(),
   OLLAMA_API_KEY: z.string().optional(),
+  TAVILY_API_KEY: z.string().optional(),
   OLLAMA_BASE_URL: z.url('Invalid OLLAMA_BASE_URL').default('http://localhost:11434'),
   OLLAMA_CLOUD_BASE_URL: z.url('Invalid OLLAMA_CLOUD_BASE_URL').optional(),
   NODE_ENV: z.enum(['development', 'production']).default('development'),
