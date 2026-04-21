@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, CircleDot } from 'lucide-react';
 
 export default function JobDetailPage() {
   const { jobId } = useParams<{ jobId: string }>();
@@ -32,7 +32,12 @@ export default function JobDetailPage() {
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex items-center gap-3">
         {sessionId && (
-          <Button variant="ghost" size="sm" render={<Link to={`/sessions/${sessionId}`} />}>
+          <Button
+            variant="link"
+            size="sm"
+            className="px-0"
+            render={<Link to={`/sessions/${sessionId}`} />}
+          >
             <ArrowLeft className="mr-1 h-4 w-4" />
             Back to Session
           </Button>
@@ -41,7 +46,8 @@ export default function JobDetailPage() {
 
       <div className="flex items-center gap-3">
         <h1 className="text-2xl font-bold">{title}</h1>
-        <Badge variant={status === 'live' ? 'default' : 'secondary'}>
+        <Badge variant="default" className={status === 'live' ? 'bg-red-500' : ''}>
+          {status === 'live' && <CircleDot />}
           {status === 'live' ? 'Live' : isComplete ? 'Complete' : 'Connecting...'}
         </Badge>
       </div>

@@ -1,5 +1,5 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useParams, Link } from 'react-router';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { useParams, Link, useNavigate } from 'react-router';
 import { useEffect } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
@@ -11,11 +11,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, RefreshCw } from 'lucide-react';
 
 export default function SessionDetailPage() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: session, isLoading } = useQuery({
     queryKey: ['session', id],
@@ -23,7 +24,7 @@ export default function SessionDetailPage() {
     enabled: !!id,
   });
 
-  const isInProgress = session?.status === 'pending' || session?.status === 'processing';
+  const isInProgress = session?.status === 'pending';
 
   const { data: latestJob } = useQuery({
     queryKey: ['session-job', id],
@@ -32,6 +33,15 @@ export default function SessionDetailPage() {
   });
 
   const { events, status: sseStatus } = useSSE(isInProgress ? (latestJob?.jobId ?? null) : null);
+
+  const retryMutation = useMutation({
+    mutationFn: () => researchApi.retrySession(Number(id)),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['session', id] });
+      queryClient.invalidateQueries({ queryKey: ['session-job', id] });
+      navigate(`/research/jobs/${data.jobId}?sessionId=${id}`);
+    },
+  });
 
   // When SSE completes, refresh the session to show the final result
   useEffect(() => {
@@ -48,7 +58,7 @@ export default function SessionDetailPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" render={<Link to="/sessions" />}>
+        <Button variant="link" size="sm" className="px-0" render={<Link to="/sessions" />}>
           <ArrowLeft className="mr-1 h-4 w-4" />
           Back
         </Button>
@@ -57,10 +67,33 @@ export default function SessionDetailPage() {
       <div>
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold">{session.title}</h1>
-          <Badge variant={session.status === 'completed' ? 'default' : 'secondary'}>
+          <Badge
+            variant="default"
+            className={
+              session.status === 'pending'
+                ? 'bg-yellow-500'
+                : session.status === 'completed'
+                  ? 'bg-green-500'
+                  : session.status === 'failed'
+                    ? 'bg-red-500'
+                    : ''
+            }
+          >
             {session.status}
           </Badge>
           <Badge variant="outline">{session.provider}</Badge>
+          {session.status === 'failed' && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="cursor-pointer"
+              onClick={() => retryMutation.mutate()}
+              disabled={retryMutation.isPending}
+            >
+              <RefreshCw className="mr-1 h-4 w-4" />
+              {retryMutation.isPending ? 'Retrying...' : 'Retry'}
+            </Button>
+          )}
         </div>
         {session.description && <p className="mt-1 text-muted-foreground">{session.description}</p>}
         <p className="mt-1 text-xs text-muted-foreground">
@@ -76,7 +109,7 @@ export default function SessionDetailPage() {
             <CardTitle>Research Report</CardTitle>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-[500px] pr-4">
+            <ScrollArea className="h-125 pr-4">
               <div className="prose prose-sm dark:prose-invert max-w-none">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{session.result}</ReactMarkdown>
               </div>

@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { FlaskConical, History } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
@@ -17,6 +18,19 @@ export default function DashboardPage() {
   const recent = sessions.slice(0, 5);
   const completed = sessions.filter((s: any) => s.status === 'completed').length;
   const usedProviders = [...new Set(sessions.map((s: any) => s.provider))];
+
+  const getBadgeColor = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'bg-green-500';
+      case 'pending':
+        return 'bg-yellow-500';
+      case 'failed':
+        return 'bg-red-500';
+      default:
+        return 'bg-muted';
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -68,14 +82,14 @@ export default function DashboardPage() {
 
       <div className="flex gap-3">
         <Link to="/research/new">
-          <Button>
-            <FlaskConical className="mr-2 h-4 w-4" />
+          <Button className="cursor-pointer">
+            <FlaskConical className="h-4 w-4" />
             New Research
           </Button>
         </Link>
         <Link to="/sessions">
-          <Button variant="outline">
-            <History className="mr-2 h-4 w-4" />
+          <Button variant="outline" className="cursor-pointer">
+            <History className="h-4 w-4" />
             View History
           </Button>
         </Link>
@@ -87,11 +101,16 @@ export default function DashboardPage() {
           {recent.map((session: any) => (
             <Link key={session.id} to={`/sessions/${session.id}`} className="block">
               <Card className="cursor-pointer transition-colors hover:bg-muted/50">
-                <CardContent className="flex items-center justify-between py-3">
-                  <p className="text-sm font-medium">{session.title}</p>
-                  <div className="flex gap-2">
+                <CardContent className="flex items-center justify-between py-4">
+                  <div>
+                    <p className="font-medium">{session.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDistanceToNow(new Date(session.createdAt), { addSuffix: true })}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
                     <Badge variant="outline">{session.provider}</Badge>
-                    <Badge variant={session.status === 'completed' ? 'default' : 'secondary'}>
+                    <Badge variant="default" className={getBadgeColor(session.status)}>
                       {session.status}
                     </Badge>
                   </div>

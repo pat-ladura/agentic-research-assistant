@@ -11,6 +11,19 @@ export default function SessionsPage() {
     queryFn: researchApi.getSessions,
   });
 
+  const getBadgeColor = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'bg-green-500';
+      case 'pending':
+        return 'bg-yellow-500';
+      case 'failed':
+        return 'bg-red-500';
+      default:
+        return 'bg-muted';
+    }
+  };
+
   if (isLoading) return <div className="text-muted-foreground">Loading sessions...</div>;
 
   return (
@@ -30,7 +43,7 @@ export default function SessionsPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline">{session.provider}</Badge>
-                  <Badge variant={session.status === 'completed' ? 'default' : 'secondary'}>
+                  <Badge variant="default" className={getBadgeColor(session.status)}>
                     {session.status}
                   </Badge>
                 </div>

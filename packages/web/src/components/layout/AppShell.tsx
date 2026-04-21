@@ -93,7 +93,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               to={to}
               className={({ isActive }) =>
                 cn(
-                  'flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors h-10',
+                  'flex items-center gap-2 rounded-md px-3 py-2 text-md transition-colors h-10',
                   isActive
                     ? 'bg-primary text-primary-foreground'
                     : 'hover:bg-muted text-muted-foreground hover:text-foreground'
