@@ -88,7 +88,10 @@ export async function storeDocumentChunk(
     const vec = await provider.embed(content);
     embedding = vec.length > 0 ? vec : null;
   } catch (err) {
-    logger.warn({ sessionId, source, err }, 'RAG: embed() failed for document chunk, storing without vector');
+    logger.warn(
+      { sessionId, source, err },
+      'RAG: embed() failed for document chunk, storing without vector'
+    );
   }
 
   const is768d = embedding !== null && embedding.length === 768;
