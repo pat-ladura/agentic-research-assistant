@@ -240,12 +240,7 @@ router.post('/sessions/:id/retry', async (req: Request, res: Response, next: Nex
     }
 
     if (session.status !== 'failed') {
-      return sendError(
-        res,
-        400,
-        ErrorCode.VALIDATION_ERROR,
-        'Only failed sessions can be retried'
-      );
+      return sendError(res, 400, ErrorCode.VALIDATION_ERROR, 'Only failed sessions can be retried');
     }
 
     const [lastJob] = await db

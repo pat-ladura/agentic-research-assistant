@@ -58,7 +58,7 @@ export default function JobDetailPage() {
       <div className="flex items-center gap-3">
         <h1 className="text-2xl font-bold">{title}</h1>
         <Badge variant="secondary" className={status === 'live' ? 'bg-red-500 text-white' : ''}>
-          {status === 'live' && <CircleDot className='animate-pulse' />}
+          {status === 'live' && <CircleDot className="animate-pulse" />}
           {status === 'live' ? 'Live' : isComplete ? 'Complete' : 'Connecting...'}
         </Badge>
       </div>

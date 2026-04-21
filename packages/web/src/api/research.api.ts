@@ -88,7 +88,9 @@ export const researchApi = {
     );
   },
 
-  retrySession: async (sessionId: number): Promise<{ jobId: string; sessionId: number; status: string }> => {
+  retrySession: async (
+    sessionId: number
+  ): Promise<{ jobId: string; sessionId: number; status: string }> => {
     const response = await apiClient
       .post(`research/sessions/${sessionId}/retry`)
       .json<ApiResponse<{ jobId: string; sessionId: number; status: string }>>();
