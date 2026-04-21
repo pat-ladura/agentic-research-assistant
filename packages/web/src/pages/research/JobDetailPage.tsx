@@ -1,15 +1,16 @@
 import { useParams, useSearchParams, Link } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { useReactToPrint } from 'react-to-print';
 import { useSSE } from '@/hooks/useSSE';
 import { StepProgress } from '@/components/research/StepProgress';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, CircleDot } from 'lucide-react';
+import { ArrowLeft, CircleDot, Printer } from 'lucide-react';
 
 export default function JobDetailPage() {
   const { jobId } = useParams<{ jobId: string }>();
@@ -27,6 +28,9 @@ export default function JobDetailPage() {
 
   const isComplete = status === 'complete' || status === 'failed';
   const title = status === 'complete' ? 'Research Complete' : 'Research in Progress';
+
+  const printRef = useRef<HTMLDivElement>(null);
+  const handlePrint = useReactToPrint({ contentRef: printRef });
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -56,13 +60,22 @@ export default function JobDetailPage() {
 
       {report && (
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Research Report</CardTitle>
+            <Button variant="outline" size="sm" onClick={() => handlePrint()}>
+              <Printer className="mr-1 h-4 w-4" />
+              Print / Save PDF
+            </Button>
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-125 pr-4">
-              <div className="prose prose-sm dark:prose-invert max-w-none">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{report}</ReactMarkdown>
+              <div ref={printRef} style={{ padding: '20px' }}>
+                <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '24px' }}>
+                  {title}
+                </h1>
+                <div className="prose prose-sm dark:prose-invert max-w-none">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{report}</ReactMarkdown>
+                </div>
               </div>
             </ScrollArea>
           </CardContent>

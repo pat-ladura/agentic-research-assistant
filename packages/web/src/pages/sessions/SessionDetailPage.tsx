@@ -1,9 +1,10 @@
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useParams, Link, useNavigate } from 'react-router';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { useReactToPrint } from 'react-to-print';
 import { researchApi } from '@/api/research.api';
 import { useSSE } from '@/hooks/useSSE';
 import { StepProgress } from '@/components/research/StepProgress';
@@ -11,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ArrowLeft, RefreshCw } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Printer } from 'lucide-react';
 import { ProviderIcon } from '@/components/ui/provider-icon';
 
 export default function SessionDetailPage() {
@@ -50,6 +51,9 @@ export default function SessionDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['session', id] });
     }
   }, [sseStatus, id, queryClient]);
+
+  const printRef = useRef<HTMLDivElement>(null);
+  const handlePrint = useReactToPrint({ documentTitle: session?.title, contentRef: printRef });
 
   if (isLoading) return <div className="text-muted-foreground">Loading session...</div>;
   if (!session) return <div className="text-muted-foreground">Session not found.</div>;
@@ -108,13 +112,22 @@ export default function SessionDetailPage() {
 
       {session.result && (
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Research Report</CardTitle>
+            <Button variant="outline" size="sm" onClick={() => handlePrint()}>
+              <Printer className="mr-1 h-4 w-4" />
+              Print / Save PDF
+            </Button>
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-125 pr-4">
-              <div className="prose prose-sm dark:prose-invert max-w-none">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{session.result}</ReactMarkdown>
+              <div ref={printRef} style={{ padding: '20px' }}>
+                <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '24px' }}>
+                  {session.title}
+                </h1>
+                <div className="prose prose-sm dark:prose-invert max-w-none">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{session.result}</ReactMarkdown>
+                </div>
               </div>
             </ScrollArea>
           </CardContent>
