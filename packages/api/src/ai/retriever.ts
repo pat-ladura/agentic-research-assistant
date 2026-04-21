@@ -6,7 +6,7 @@ import { logger } from '../lib/logger';
 
 const EMBEDDING_MODEL_MAP: Record<string, string> = {
   openai: 'text-embedding-3-small',
-  gemini: 'text-embedding-004',
+  gemini: 'nomic-embed-text',
   ollama: 'nomic-embed-text',
 };
 

@@ -1,17 +1,19 @@
 import { GoogleGenAI } from '@google/genai';
 import { AIProvider, ChatMessage } from './provider';
+import { OllamaProvider } from './ollama.provider';
 import { logger } from '../lib/logger';
 import { getEnv } from '../config/env';
 
 export class GeminiProvider implements AIProvider {
   private client: GoogleGenAI;
   private model: string = 'gemini-2.5-flash';
-  private embeddingModel: string = 'text-embedding-004'; // 768d
+  private localEmbedder: OllamaProvider;
 
   constructor() {
     const env = getEnv();
     if (!env.GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is not set');
     this.client = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
+    this.localEmbedder = new OllamaProvider({ cloud: false }); // nomic-embed-text, 768d
   }
 
   async chat(messages: ChatMessage[], systemPrompt?: string): Promise<string> {
@@ -41,22 +43,7 @@ export class GeminiProvider implements AIProvider {
   }
 
   async embed(text: string): Promise<number[]> {
-    try {
-      const response = await this.client.models.embedContent({
-        model: this.embeddingModel,
-        contents: [{ parts: [{ text }] }],
-      });
-
-      const values = response.embeddings?.[0]?.values;
-      if (!values) throw new Error('No embedding in Gemini response');
-      logger.debug({ model: this.embeddingModel }, 'Gemini embedding generated');
-      return values;
-    } catch (error) {
-      logger.error(error, 'Gemini embedding failed');
-      throw new Error(
-        `Gemini embedding error: ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
+    return this.localEmbedder.embed(text);
   }
 
   async complete(prompt: string, _maxTokens: number = 256): Promise<string> {
