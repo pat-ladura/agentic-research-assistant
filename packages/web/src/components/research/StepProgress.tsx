@@ -6,13 +6,22 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import type { JobProgressEvent } from '@/types';
 import type { SSEStatus } from '@/hooks/useSSE';
 
-export const STEPS = ['decompose', 'search', 'summarize', 'synthesize'] as const;
+export const STEPS = [
+  'decompose',
+  'search',
+  'summarize',
+  'synthesize',
+  'critique',
+  'refine',
+] as const;
 
 export const STEP_LABELS: Record<string, string> = {
   decompose: 'Decompose Query',
   search: 'Generate Search Queries',
   summarize: 'Summarize Sources',
   synthesize: 'Synthesize Report',
+  critique: 'Critique Report',
+  refine: 'Refine Report',
 };
 
 export const STEP_HINTS: Record<string, string> = {
@@ -20,6 +29,8 @@ export const STEP_HINTS: Record<string, string> = {
   search: 'High-reason → selected provider',
   summarize: 'Low-reason → local Ollama',
   synthesize: 'High-reason → selected provider',
+  critique: 'Low-reason → local Ollama',
+  refine: 'High-reason → selected provider',
 };
 
 function StepRow({ step, events }: { step: string; events: JobProgressEvent[] }) {

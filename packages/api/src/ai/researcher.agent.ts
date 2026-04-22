@@ -128,7 +128,7 @@ export class ResearcherAgent {
           body: JSON.stringify({
             api_key: TAVILY_API_KEY,
             query,
-            max_results: 3,
+            max_results: 4,
             include_answer: false,
           }),
         });
@@ -165,6 +165,31 @@ export class ResearcherAgent {
     }
   }
 
+  private async rerankChunks(query: string, chunks: string[]): Promise<string[]> {
+    if (chunks.length === 0) return [];
+
+    const ranked = await this.think(
+      `You are ranking research excerpts.
+
+      Query:
+      "${query}"
+
+      Return ONLY the numbers of the top 5 most relevant excerpts (e.g., "1,3,5,2,4").
+
+      Excerpts:
+      ${chunks.map((c, i) => `[${i + 1}] ${c}`).join('\n\n')}`
+    );
+
+    // simple extraction: return top 5 chunks by matching text
+    const indices =
+      ranked
+        .match(/\d+/g)
+        ?.map((n) => parseInt(n, 10) - 1)
+        .filter((i) => i >= 0 && i < chunks.length) ?? [];
+
+    return indices.map((i) => chunks[i]).slice(0, 5);
+  }
+
   async run(query: string): Promise<string> {
     const systemPrompt = `You are an expert research assistant. Be precise, cite reasoning, and structure your output clearly.`;
 
@@ -182,7 +207,12 @@ export class ResearcherAgent {
     this.emit('search', 'started', 'Generating search queries');
     const searchQueries = await this.runStep(
       'search',
-      `For each sub-question above, generate one precise web search query. Return only a numbered list of search queries.`,
+      `For each sub-question above:
+      - Generate TWO search queries:
+      1. One broad query
+      2. One highly specific query
+
+      Return only a numbered list.`,
       systemPrompt
     );
     this.emit('search', 'progress', 'Search queries generated', { searchQueries });
@@ -197,21 +227,34 @@ export class ResearcherAgent {
     this.emit('summarize', 'started', 'Summarizing available context');
     const summaries = await this.runStep(
       'summarize',
-      `Based on your knowledge of the sub-questions and search queries above, provide a brief factual summary for each sub-question. Mark clearly where external verification is needed.`,
+      `Based on the sub-questions and intended search queries:
+
+      - Outline what each sub-question likely requires
+      - DO NOT provide factual answers
+      - Instead, describe what information should be gathered
+      - If unsure, say "Needs external verification"`,
       systemPrompt,
-      true // lowReason — offloads to local Ollama
+      true
     );
     this.emit('summarize', 'progress', 'Summaries complete', { summaries });
     this.emit('summarize', 'completed', 'Summaries ready', { summaries });
 
-    // RAG: inject relevant document chunks before synthesis if session has stored documents
+    // Step 4: Synthesize — final step emits 'completed' to close the SSE stream
+    this.emit('synthesize', 'started', 'Synthesizing final report');
+
+    // RAG: inject relevant document chunks into memory before the AI call
     if (this.sessionId !== null) {
       const provider = getAIProvider(this.providerType);
-      const relevantChunks = await retrieveRelevantChunks(query, this.sessionId, provider);
+      const retrievedChunks = await retrieveRelevantChunks(query, this.sessionId, provider);
+      const relevantChunks = await this.rerankChunks(query, retrievedChunks);
       if (relevantChunks.length > 0) {
         this.memory.push({
           role: 'user',
-          content: `Here are relevant excerpts retrieved from research sources:\n\n${relevantChunks.join('\n\n---\n\n')}\n\nUse these in your final synthesis.`,
+          content: `Here are relevant excerpts retrieved from research sources:
+
+                    ${relevantChunks.map((c, i) => `[Source ${i + 1}]\n${c}`).join('\n\n---\n\n')}
+
+                    Use these as the ONLY source of truth for factual claims.`,
         });
         this.memory.push({
           role: 'assistant',
@@ -223,16 +266,79 @@ export class ResearcherAgent {
       }
     }
 
-    // Step 4: Synthesize — final step emits 'completed' to close the SSE stream
-    this.emit('synthesize', 'started', 'Synthesizing final report');
+    this.memory = this.memory
+      .filter(
+        (m) =>
+          m.content.includes('Source') ||
+          m.content.includes('sub-question') ||
+          m.content.includes('summary') ||
+          m.role === 'system'
+      )
+      .slice(-12);
     const report = await this.runStep(
       'synthesize',
-      `Using all the sub-questions and summaries above, write a comprehensive research report answering the original query:\n\n"${query}"\n\nStructure with: Executive Summary, Key Findings, Details per Sub-question, Conclusion.`,
+      `Using all sub-questions, summaries, and retrieved excerpts:
+
+      STRICT RULES:
+      - ONLY use information from the provided excerpts for factual claims
+      - If information is missing, say "Insufficient data"
+      - Cite sources using [Source #] based on excerpt order
+      - Do NOT invent facts
+
+      Write a comprehensive research report:
+
+      Structure:
+      - Executive Summary
+      - Key Findings (with citations)
+      - Details per Sub-question (with citations)
+      - Gaps / Uncertainties
+      - Conclusion`,
       systemPrompt
     );
     this.emit('synthesize', 'completed', 'Research complete', { report });
 
-    return report;
+    // Step 5: Critique
+    this.emit('critique', 'started', 'Reviewing report for quality');
+
+    const critique = await this.runStep(
+      'critique',
+      `Critique the following research report:
+
+      ${report}
+
+      Identify:
+      - Unsupported claims
+      - Missing information
+      - Unclear sections
+
+      Be concise.`,
+      systemPrompt,
+      true
+    );
+    this.emit('critique', 'progress', 'Critique complete', { critique });
+    this.emit('critique', 'completed', 'Critique ready', { critique });
+
+    // Step 6: Improve report
+    this.emit('refine', 'started', 'Improving report');
+
+    const improvedReport = await this.runStep(
+      'refine',
+      `Improve the report based on this critique:
+
+      CRITIQUE:
+      ${critique}
+
+      REPORT:
+      ${report}
+
+      Return a final improved version with better clarity, accuracy, and completeness.`,
+      systemPrompt
+    );
+
+    this.emit('refine', 'progress', 'Report improved', { report: improvedReport });
+    this.emit('refine', 'completed', 'Final report ready', { report: improvedReport });
+
+    return improvedReport;
   }
 
   getMemory(): ChatMessage[] {

@@ -51,7 +51,7 @@ export const researchJobs = pgTable('research_jobs', {
 
 /**
  * Research Steps table
- * Tracks individual steps within a research job (decompose, search, summarize, synthesize)
+ * Tracks individual steps within a research job (decompose, search, summarize, synthesize, critique, refine)
  */
 export const researchSteps = pgTable('research_steps', {
   id: serial('id').primaryKey(),

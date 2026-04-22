@@ -47,7 +47,7 @@ export function useSSE(jobId: string | null) {
           const event: JobProgressEvent = JSON.parse(msg.data);
           setEvents((prev) => [...prev, event]);
 
-          if (event.step === 'synthesize' && event.status === 'completed') {
+          if (event.step === 'refine' && event.status === 'completed') {
             setReport(event.data?.report);
             setStatus('complete');
           } else if (event.status === 'failed') {
