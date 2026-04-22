@@ -114,7 +114,12 @@ export default function SessionDetailPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Research Report</CardTitle>
-            <Button variant="outline" size="sm" onClick={() => handlePrint()}>
+            <Button
+              variant="outline"
+              className="cursor-pointer"
+              size="sm"
+              onClick={() => handlePrint()}
+            >
               <Printer className="mr-1 h-4 w-4" />
               Print / Save PDF
             </Button>

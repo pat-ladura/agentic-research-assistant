@@ -43,6 +43,7 @@ export type ApiResponse<T = any> = ApiSuccessResponse<T> | ApiErrorResponse;
 export interface ResearchSession {
   id: number;
   userId: number;
+  researchJob: ResearchJob | null;
   title: string;
   description?: string;
   provider: 'openai' | 'gemini' | 'ollama';

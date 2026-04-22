@@ -7,7 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ProviderIcon } from '@/components/ui/provider-icon';
 import { FlaskConical, History } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { SessionCard } from '@/components/sessions/SessionCard';
+
+const PROVIDERS = ['openai', 'gemini', 'ollama'];
 
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
@@ -21,20 +23,6 @@ export default function DashboardPage() {
   const { sessions } = data;
   const recent = sessions.slice(0, 5);
   const completed = sessions.filter((s: any) => s.status === 'completed').length;
-  const usedProviders = [...new Set(sessions.map((s: any) => s.provider))];
-
-  const getBadgeColor = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'bg-green-500';
-      case 'pending':
-        return 'bg-yellow-500';
-      case 'failed':
-        return 'bg-red-500';
-      default:
-        return 'bg-muted';
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -65,13 +53,13 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Providers Used
+              Providers Available
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-1">
-              {usedProviders.length > 0 ? (
-                usedProviders.map((p: any) => (
+              {PROVIDERS.length > 0 ? (
+                PROVIDERS.map((p: any) => (
                   <Badge
                     key={p}
                     variant="outline"
@@ -108,27 +96,7 @@ export default function DashboardPage() {
         <div className="space-y-3">
           <h2 className="text-lg font-semibold">Recent Sessions</h2>
           {recent.map((session: any) => (
-            <Link key={session.id} to={`/sessions/${session.id}`} className="block">
-              <Card className="cursor-pointer transition-colors hover:bg-muted/50">
-                <CardContent className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">{session.title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(session.createdAt), { addSuffix: true })}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="flex items-center gap-1">
-                      <ProviderIcon provider={session.provider} />
-                      {session.provider}
-                    </Badge>
-                    <Badge variant="default" className={getBadgeColor(session.status)}>
-                      {session.status}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
+            <SessionCard key={session.id} session={session} />
           ))}
         </div>
       )}

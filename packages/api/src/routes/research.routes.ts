@@ -80,7 +80,10 @@ router.get('/sessions', async (req: Request, res: Response, next: NextFunction) 
     const totalPages = Math.ceil(total / pageSize);
 
     return sendSuccess(res, {
-      sessions: sessions.map((r) => r.research_sessions),
+      sessions: sessions.map((r) => ({
+        ...r.research_sessions,
+        researchJob: r.research_jobs ?? null,
+      })),
       pagination: { page, pageSize, total, totalPages },
     });
   } catch (error) {
