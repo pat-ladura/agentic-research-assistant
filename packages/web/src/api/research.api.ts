@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { ResearchSession, ResearchJob, ApiResponse } from '@/types';
+import type { ResearchSession, ResearchJob, ApiResponse, PaginationMeta } from '@/types';
 
 export interface SessionLatestJob {
   jobId: string;
@@ -9,19 +9,36 @@ export interface SessionLatestJob {
   createdAt: string;
 }
 
-export const researchApi = {
-  getSessions: async (): Promise<ResearchSession[]> => {
-    try {
-      const response = await apiClient
-        .get('research/sessions')
-        .json<ApiResponse<{ sessions: ResearchSession[] }>>();
+export interface SessionsParams {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+}
 
-      if (response.success && response.data?.sessions) {
-        return response.data.sessions;
+export interface SessionsResult {
+  sessions: ResearchSession[];
+  pagination: PaginationMeta;
+}
+
+export const researchApi = {
+  getSessions: async (params: SessionsParams = {}): Promise<SessionsResult> => {
+    try {
+      const searchParams: Record<string, string> = {
+        page: String(params.page ?? 1),
+        pageSize: String(params.pageSize ?? 20),
+      };
+      if (params.search) searchParams.search = params.search;
+
+      const response = await apiClient
+        .get('research/sessions', { searchParams })
+        .json<ApiResponse<SessionsResult>>();
+
+      if (response.success && response.data) {
+        return response.data;
       }
-      return [];
+      return { sessions: [], pagination: { page: 1, pageSize: 20, total: 0, totalPages: 0 } };
     } catch {
-      return [];
+      return { sessions: [], pagination: { page: 1, pageSize: 20, total: 0, totalPages: 0 } };
     }
   },
 

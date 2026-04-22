@@ -63,6 +63,13 @@ export interface ResearchJob {
   createdAt: string;
 }
 
+export interface PaginationMeta {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
 export interface JobProgressEvent {
   jobId: string;
   step: 'decompose' | 'search' | 'summarize' | 'synthesize' | 'agent' | 'stream';

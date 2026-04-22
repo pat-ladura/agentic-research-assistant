@@ -11,11 +11,14 @@ import { formatDistanceToNow } from 'date-fns';
 
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
-  const { data: sessions = [] } = useQuery({
+  const {
+    data = { sessions: [], pagination: { page: 1, pageSize: 20, total: 0, totalPages: 0 } },
+  } = useQuery({
     queryKey: ['sessions'],
-    queryFn: researchApi.getSessions,
+    queryFn: () => researchApi.getSessions({ pageSize: 100 }),
   });
 
+  const { sessions } = data;
   const recent = sessions.slice(0, 5);
   const completed = sessions.filter((s: any) => s.status === 'completed').length;
   const usedProviders = [...new Set(sessions.map((s: any) => s.provider))];
