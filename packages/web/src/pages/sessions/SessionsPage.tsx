@@ -1,13 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router';
-import { formatDistanceToNow } from 'date-fns';
 import { useState, useRef, useEffect } from 'react';
 import { researchApi } from '@/api/research.api';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { ProviderIcon } from '@/components/ui/provider-icon';
+import { SessionCard } from '@/components/sessions/SessionCard';
 
 export default function SessionsPage() {
   const [page, setPage] = useState(1);
@@ -47,19 +43,6 @@ export default function SessionsPage() {
 
   const { sessions, pagination } = data;
 
-  const getBadgeColor = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'bg-green-500';
-      case 'pending':
-        return 'bg-yellow-500';
-      case 'failed':
-        return 'bg-red-500';
-      default:
-        return 'bg-muted';
-    }
-  };
-
   const handlePrevPage = () => {
     if (pagination.page > 1) setPage(pagination.page - 1);
   };
@@ -89,27 +72,8 @@ export default function SessionsPage() {
       )}
 
       <div className="space-y-3">
-        {sessions.map((session) => (
-          <Link key={session.id} to={`/sessions/${session.id}`} className="block">
-            <Card className="cursor-pointer transition-colors hover:bg-muted/50">
-              <CardContent className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">{session.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(new Date(session.createdAt), { addSuffix: true })}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="flex items-center gap-1">
-                    <ProviderIcon provider={session.provider} /> {session.provider}
-                  </Badge>
-                  <Badge variant="default" className={getBadgeColor(session.status)}>
-                    {session.status}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+        {sessions.map((session: any) => (
+          <SessionCard key={session.id} session={session} />
         ))}
       </div>
 

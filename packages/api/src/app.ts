@@ -58,7 +58,7 @@ export async function createApp(): Promise<Application> {
   };
 
   app.use('/api/', conditionalApiKeyMiddleware, conditionalJwtMiddleware);
-  app.use('/api/research', aiLimiter);
+  app.use('/api/research/query', aiLimiter);
 
   // Application routes
   app.use('/api', router);
