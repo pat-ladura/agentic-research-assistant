@@ -169,15 +169,15 @@ export class ResearcherAgent {
     if (chunks.length === 0) return [];
 
     const ranked = await this.think(
-      `You are ranking research excerpts.
-
-      Query:
+      `Query:
       "${query}"
 
-      Return ONLY the numbers of the top 5 most relevant excerpts (e.g., "1,3,5,2,4").
+      Return ONLY the numbers of the top 5 most relevant excerpts (e.g., "1,3,5,2,4"). No explanation.
 
       Excerpts:
-      ${chunks.map((c, i) => `[${i + 1}] ${c}`).join('\n\n')}`
+      ${chunks.map((c, i) => `[${i + 1}] ${c}`).join('\n\n')}`,
+      `You are a relevance ranking assistant. Given a query and a list of excerpts, output only a comma-separated list of excerpt numbers ranked by relevance to the query. Output nothing else.`,
+      true // low-reason: ranking is pattern-matching, not deep reasoning
     );
 
     // simple extraction: return top 5 chunks by matching text
