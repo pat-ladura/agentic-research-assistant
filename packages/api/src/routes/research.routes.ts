@@ -1,5 +1,5 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
-import { eq, desc, asc } from 'drizzle-orm';
+import { eq, desc, asc, ilike, or, countDistinct, sql } from 'drizzle-orm';
 import { logger } from '../lib/logger';
 import { sendSuccess, sendError, ErrorCode } from '../lib/api-response';
 import { getQueueProvider } from '../queue';
@@ -48,12 +48,41 @@ const router: Router = Router();
 router.get('/sessions', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const db = getDb();
-    const sessions = await db
-      .select()
+
+    const page = Math.max(1, parseInt(String(req.query.page ?? '1'), 10) || 1);
+    const pageSize = Math.min(
+      100,
+      Math.max(1, parseInt(String(req.query.pageSize ?? '20'), 10) || 20)
+    );
+    const search = req.query.search ? String(req.query.search).trim() : null;
+
+    const userFilter = eq(researchSessions.userId, req.user!.id);
+    const searchFilter = search
+      ? or(ilike(researchSessions.title, `%${search}%`), ilike(researchJobs.query, `%${search}%`))
+      : undefined;
+    const whereClause = searchFilter ? sql`${userFilter} AND ${searchFilter}` : userFilter;
+
+    const [{ total }] = await db
+      .select({ total: countDistinct(researchSessions.id) })
       .from(researchSessions)
-      .where(eq(researchSessions.userId, req.user!.id))
-      .orderBy(desc(researchSessions.createdAt));
-    return sendSuccess(res, { sessions });
+      .leftJoin(researchJobs, eq(researchJobs.sessionId, researchSessions.id))
+      .where(whereClause);
+
+    const sessions = await db
+      .selectDistinctOn([researchSessions.createdAt, researchSessions.id])
+      .from(researchSessions)
+      .leftJoin(researchJobs, eq(researchJobs.sessionId, researchSessions.id))
+      .where(whereClause)
+      .orderBy(desc(researchSessions.createdAt))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize);
+
+    const totalPages = Math.ceil(total / pageSize);
+
+    return sendSuccess(res, {
+      sessions: sessions.map((r) => r.research_sessions),
+      pagination: { page, pageSize, total, totalPages },
+    });
   } catch (error) {
     next(error);
   }
@@ -61,7 +90,7 @@ router.get('/sessions', async (req: Request, res: Response, next: NextFunction) 
 
 const EMBEDDING_DEFAULTS: Record<string, { model: string; dimensions: number }> = {
   openai: { model: 'text-embedding-3-small', dimensions: 1536 },
-  gemini: { model: 'text-embedding-004', dimensions: 768 },
+  gemini: { model: 'nomic-embed-text', dimensions: 768 },
   ollama: { model: 'nomic-embed-text', dimensions: 768 },
 };
 

@@ -44,12 +44,14 @@ export default function LoginPage() {
             <BotMessageSquare size={60} />
           </CardTitle>
           <CardTitle className="text-4xl tracking-widest">AGENTIC</CardTitle>
-          <CardTitle className="text-md -mt-1.25">RESEARCH ASSISTANT</CardTitle>
+          <CardTitle className="text-md font-normal -mt-1.25">RESEARCH ASSISTANT</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4 mb-5">
             <div className="space-y-1">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="font-normal">
+                Email
+              </Label>
               <Input
                 id="email"
                 type="email"
@@ -60,7 +62,9 @@ export default function LoginPage() {
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="font-normal">
+                Password
+              </Label>
               <Input
                 id="password"
                 type="password"
