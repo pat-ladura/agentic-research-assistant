@@ -5,7 +5,7 @@ import { HybridProvider, ChatOptions } from './hybrid.provider';
 import { emitJobProgress } from '../queue/job-events';
 import { getDb } from '../config/database';
 import { researchSteps, stepResults } from '../db/schema';
-import { retrieveRelevantChunks, storeDocumentChunk } from './retriever';
+import { retrieveRelevantChunks, storeDocumentChunk, RetrievedChunk } from './retriever';
 import { getEnv } from '../config/env';
 import { logger } from '../lib/logger';
 
@@ -118,6 +118,7 @@ export class ResearcherAgent {
     if (queries.length === 0) return;
 
     const provider = getAIProvider(this.providerType);
+    const seenUrls = new Set<string>();
     let stored = 0;
 
     for (const query of queries) {
@@ -144,6 +145,8 @@ export class ResearcherAgent {
 
         for (const result of data.results ?? []) {
           if (!result.content) continue;
+          if (result.url && seenUrls.has(result.url)) continue;
+          if (result.url) seenUrls.add(result.url);
           await storeDocumentChunk(
             this.sessionId!,
             result.title ?? query,
@@ -165,7 +168,7 @@ export class ResearcherAgent {
     }
   }
 
-  private async rerankChunks(query: string, chunks: string[]): Promise<string[]> {
+  private async rerankChunks(query: string, chunks: RetrievedChunk[]): Promise<RetrievedChunk[]> {
     if (chunks.length === 0) return [];
 
     const ranked = await this.think(
@@ -175,7 +178,7 @@ export class ResearcherAgent {
       Return ONLY the numbers of the top 5 most relevant excerpts (e.g., "1,3,5,2,4"). No explanation.
 
       Excerpts:
-      ${chunks.map((c, i) => `[${i + 1}] ${c}`).join('\n\n')}`,
+      ${chunks.map((c, i) => `[${i + 1}] ${c.content}`).join('\n\n')}`,
       `You are a relevance ranking assistant. Given a query and a list of excerpts, output only a comma-separated list of excerpt numbers ranked by relevance to the query. Output nothing else.`,
       true // low-reason: ranking is pattern-matching, not deep reasoning
     );
@@ -246,19 +249,27 @@ export class ResearcherAgent {
     if (this.sessionId !== null) {
       const provider = getAIProvider(this.providerType);
       const retrievedChunks = await retrieveRelevantChunks(query, this.sessionId, provider);
-      const relevantChunks = await this.rerankChunks(query, retrievedChunks);
+      const rankedChunks = await this.rerankChunks(query, retrievedChunks);
+      // Deduplicate by source URL — keep the highest-ranked chunk per URL
+      const seenSources = new Set<string>();
+      const relevantChunks = rankedChunks.filter((c) => {
+        if (seenSources.has(c.source)) return false;
+        seenSources.add(c.source);
+        return true;
+      });
       if (relevantChunks.length > 0) {
         this.memory.push({
           role: 'user',
           content: `Here are relevant excerpts retrieved from research sources:
 
-                    ${relevantChunks.map((c, i) => `[Source ${i + 1}]\n${c}`).join('\n\n---\n\n')}
+                    ${relevantChunks.map((c, i) => `[Source ${i + 1}] (${c.source})\n${c.content}`).join('\n\n---\n\n')}
 
-                    Use these as the ONLY source of truth for factual claims.`,
+                    Use these as the ONLY source of truth for factual claims. Cite using [Source #] inline and list all sources in a References section at the end.`,
         });
         this.memory.push({
           role: 'assistant',
-          content: 'Understood. I will incorporate these excerpts into the synthesis.',
+          content:
+            'Understood. I will incorporate these excerpts and include a References section with their URLs.',
         });
         this.emit('synthesize', 'progress', 'Retrieved relevant document chunks', {
           chunkCount: relevantChunks.length,
@@ -292,7 +303,9 @@ export class ResearcherAgent {
       - Key Findings (with citations)
       - Details per Sub-question (with citations)
       - Gaps / Uncertainties
-      - Conclusion`,
+      - Conclusion
+      - References (numbered list: [Source #] URL)`,
+
       systemPrompt
     );
     this.emit('synthesize', 'completed', 'Research complete', { report });

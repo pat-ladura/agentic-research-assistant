@@ -20,12 +20,17 @@ const EMBEDDING_MODEL_MAP: Record<string, string> = {
  * Similarity is computed with pgvector cosine distance (<=>).
  * Results are always scoped to the session to prevent cross-session leakage.
  */
+export interface RetrievedChunk {
+  content: string;
+  source: string;
+}
+
 export async function retrieveRelevantChunks(
   query: string,
   sessionId: number,
   provider: AIProvider,
   topK: number = 5
-): Promise<string[]> {
+): Promise<RetrievedChunk[]> {
   const db = getDb();
 
   let queryEmbedding: number[];
@@ -49,7 +54,7 @@ export async function retrieveRelevantChunks(
 
   try {
     const results = await db
-      .select({ content: documents.content })
+      .select({ content: documents.content, source: documents.source })
       .from(documents)
       .where(eq(documents.sessionId, sessionId))
       .orderBy(sql`${vectorCol} <=> ${embeddingLiteral}::vector`)
@@ -59,7 +64,7 @@ export async function retrieveRelevantChunks(
       { sessionId, topK, returned: results.length, dim: queryEmbedding.length },
       'RAG retrieval complete'
     );
-    return results.map((r) => r.content);
+    return results.map((r) => ({ content: r.content, source: r.source ?? '' }));
   } catch (err) {
     logger.warn({ sessionId, err }, 'RAG: vector search failed, skipping retrieval');
     return [];

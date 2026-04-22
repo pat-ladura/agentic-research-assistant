@@ -9,7 +9,7 @@ import { researchSessions, researchJobs, researchSteps } from '../db/schema';
 
 // --- SSE guardrail constants ---
 const SSE_HEARTBEAT_MS = 15_000; // ping every 15 s to detect dead connections
-const SSE_MAX_TTL_MS = 20 * 60_000; // hard-close after 20 min to prevent zombie connections
+const SSE_MAX_TTL_MS = 25 * 60_000; // hard-close after 20 min to prevent zombie connections
 
 // Stores cleanup fn per jobId — evict stale connections on reconnect instead of rejecting
 const activeJobStreams = new Map<string, () => void>();
