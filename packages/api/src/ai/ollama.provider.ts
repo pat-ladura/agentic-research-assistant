@@ -60,7 +60,10 @@ export class OllamaProvider implements AIProvider {
       const raw = response.embeddings[0] ?? [];
       const sanitized = raw.map((v) => (Number.isFinite(v) ? v : 0));
       if (sanitized.some((v, i) => v !== raw[i])) {
-        logger.warn({ model: this.embeddingModel }, 'Ollama embedding contained NaN/Infinity — sanitized to 0');
+        logger.warn(
+          { model: this.embeddingModel },
+          'Ollama embedding contained NaN/Infinity — sanitized to 0'
+        );
       }
       logger.debug({ model: this.embeddingModel }, 'Ollama embedding generated');
       return sanitized;
