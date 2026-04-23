@@ -2,8 +2,7 @@ import { useParams, useSearchParams, Link } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { researchApi } from '@/api/research.api';
 import { useEffect, useRef } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { ReportRenderer } from '@/components/research/ReportRenderer';
 import { useReactToPrint } from 'react-to-print';
 import { useSSE } from '@/hooks/useSSE';
 import { StepProgress } from '@/components/research/StepProgress';
@@ -84,9 +83,7 @@ export default function JobDetailPage() {
                 <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '24px' }}>
                   {session?.title ?? title}
                 </h1>
-                <div className="prose prose-sm dark:prose-invert max-w-none">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{report}</ReactMarkdown>
-                </div>
+                <ReportRenderer content={report} />
               </div>
             </ScrollArea>
           </CardContent>

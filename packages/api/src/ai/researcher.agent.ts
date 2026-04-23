@@ -174,6 +174,19 @@ export class ResearcherAgent {
    *   [1] url  |  1. url  |  Source 1: url  |  [Source 1]: url  |  [Source 1](url)
    */
   private normalizeReferences(text: string): string {
+    // JSON reports don't need markdown reference normalization — return as-is
+    // (strip any accidental code fences the LLM may have added)
+    try {
+      const stripped = text
+        .trim()
+        .replace(/^```(?:json)?\s*/i, '')
+        .replace(/\s*```$/, '');
+      JSON.parse(stripped);
+      return stripped;
+    } catch {
+      // not JSON — apply legacy markdown normalization
+    }
+
     const refHeader = /^#+\s*references?\s*$/im;
     const headerMatch = text.match(refHeader);
     if (!headerMatch) return text;
@@ -313,26 +326,41 @@ export class ResearcherAgent {
       .slice(-12);
     const report = await this.runStep(
       'synthesize',
-      `Using all sub-questions, summaries, and retrieved excerpts:
+      `
+        Return ONLY valid JSON. No extra text.
 
-      STRICT RULES:
-      - ONLY use information from the provided excerpts for factual claims
-      - If information is missing, say "Insufficient data"
-      - Cite sources using [Source #] based on excerpt order
-      - Do NOT invent facts
+        Schema:
+        {
+          "executive_summary": "string",
+          "key_findings": [
+            {
+              "finding": "string",
+              "citations": ["Source 1", "Source 2"]
+            }
+          ],
+          "sub_questions": [
+            {
+              "question": "string",
+              "answer": "string",
+              "citations": ["Source 1"]
+            }
+          ],
+          "gaps": ["string"],
+          "conclusion": "string",
+          "references": [
+            {
+              "id": "Source 1",
+              "url": "https://example.com"
+            }
+          ]
+        }
 
-      Write a comprehensive research report:
-
-      Structure:
-      - Executive Summary
-      - Key Findings (with citations)
-      - Details per Sub-question (with citations)
-      - Gaps / Uncertainties
-      - Conclusion
-      - References
-        Format EXACTLY as shown, one per line, no markdown links, no brackets around the URL:
-        [Source 1] https://example.com/page
-        [Source 2] https://another.com/article`,
+        STRICT RULES:
+        - ONLY use provided excerpts
+        - If missing: "Insufficient data"
+        - citations must match reference IDs
+        - DO NOT output anything except JSON
+      `,
       systemPrompt
     );
     this.emit('synthesize', 'completed', 'Research complete', { report });
@@ -342,16 +370,16 @@ export class ResearcherAgent {
 
     const critique = await this.runStep(
       'critique',
-      `Critique the following research report:
+      `Critique the following JSON-structured research report:
 
       ${report}
 
-      Identify:
+      Identify issues in any field (executive_summary, key_findings, sub_questions, gaps, conclusion):
       - Unsupported claims
       - Missing information
-      - Unclear sections
+      - Unclear or incomplete answers
 
-      Be concise.`,
+      Be concise. Reference field names where relevant.`,
       systemPrompt,
       true
     );
@@ -363,16 +391,19 @@ export class ResearcherAgent {
 
     const improvedReport = await this.runStep(
       'refine',
-      `Improve the report based on this critique:
+      `Improve the following JSON research report based on this critique.
 
       CRITIQUE:
       ${critique}
 
-      REPORT:
+      REPORT (JSON):
       ${report}
 
-      Return a final improved version with better clarity, accuracy, and completeness.
-      Preserve the References section exactly as-is — do NOT reformat URLs or source numbers.`,
+      Return ONLY valid JSON. No extra text. Use the exact same schema.
+      Improve content within each field for clarity, accuracy, and completeness.
+      Preserve all "references" entries (id and url) exactly as-is.
+      citations must match reference IDs.
+      DO NOT output anything except JSON.`,
       systemPrompt
     );
 
