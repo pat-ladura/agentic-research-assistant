@@ -93,8 +93,8 @@ router.get('/sessions', async (req: Request, res: Response, next: NextFunction) 
 
 const EMBEDDING_DEFAULTS: Record<string, { model: string; dimensions: number }> = {
   openai: { model: 'text-embedding-3-small', dimensions: 1536 },
-  gemini: { model: 'nomic-embed-text', dimensions: 768 },
-  ollama: { model: 'nomic-embed-text', dimensions: 768 },
+  gemini: { model: 'bge-m3', dimensions: 1024 },
+  ollama: { model: 'bge-m3', dimensions: 1024 },
 };
 
 /**
@@ -214,11 +214,15 @@ router.get('/sessions/:id', async (req: Request, res: Response, next: NextFuncti
       .select()
       .from(researchSessions)
       .where(eq(researchSessions.id, sessionId))
+      .leftJoin(researchJobs, eq(researchJobs.sessionId, researchSessions.id))
       .limit(1);
-    if (!session || session.userId !== req.user!.id) {
+    if (!session || session.research_sessions.userId !== req.user!.id) {
       return sendError(res, 404, ErrorCode.NOT_FOUND, 'Session not found');
     }
-    return sendSuccess(res, session);
+    return sendSuccess(res, {
+      ...session.research_sessions,
+      researchJob: session.research_jobs ?? null,
+    });
   } catch (error) {
     next(error);
   }

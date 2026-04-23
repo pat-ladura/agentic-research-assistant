@@ -88,7 +88,8 @@ export const memoryEntries = pgTable('memory_entries', {
   sequenceOrder: integer('sequence_order').notNull(),
   embeddingModel: text('embedding_model').notNull(), // track which model created this
   embedding: vector('embedding', { dimensions: 1536 }), // OpenAI text-embedding-3-small
-  embeddingSmall: vector('embedding_small', { dimensions: 768 }), // Gemini text-embedding-004 / Ollama nomic-embed-text
+  embeddingSmall: vector('embedding_small', { dimensions: 768 }), // Gemini text-embedding-004 (legacy)
+  embeddingMedium: vector('embedding_medium', { dimensions: 1024 }), // Gemini / Ollama bge-m3
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -104,7 +105,8 @@ export const documents = pgTable('documents', {
   content: text('content').notNull(),
   embeddingModel: text('embedding_model').notNull(), // track which model created this
   embedding: vector('embedding', { dimensions: 1536 }), // OpenAI text-embedding-3-small
-  embeddingSmall: vector('embedding_small', { dimensions: 768 }), // Gemini text-embedding-004 / Ollama nomic-embed-text
+  embeddingSmall: vector('embedding_small', { dimensions: 768 }), // Gemini text-embedding-004 (legacy)
+  embeddingMedium: vector('embedding_medium', { dimensions: 1024 }), // Gemini / Ollama bge-m3
   source: text('source'), // URL, file name, etc.
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });

@@ -102,6 +102,7 @@ export default function SessionDetailPage() {
           )}
         </div>
         {session.description && <p className="mt-1 text-muted-foreground">{session.description}</p>}
+        <p className="mt-1 text-md text-muted-foreground">{session.researchJob?.query}</p>
         <p className="mt-1 text-xs text-muted-foreground">
           {formatDistanceToNow(new Date(session.createdAt), { addSuffix: true })}
         </p>

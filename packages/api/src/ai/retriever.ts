@@ -6,8 +6,8 @@ import { logger } from '../lib/logger';
 
 const EMBEDDING_MODEL_MAP: Record<string, string> = {
   openai: 'text-embedding-3-small',
-  gemini: 'nomic-embed-text',
-  ollama: 'nomic-embed-text',
+  gemini: 'bge-m3',
+  ollama: 'bge-m3',
 };
 
 /**
@@ -15,7 +15,8 @@ const EMBEDDING_MODEL_MAP: Record<string, string> = {
  *
  * Column selection:
  *  - OpenAI embeddings are 1536d → `embedding` column
- *  - Gemini / Ollama embeddings are 768d → `embedding_small` column
+ *  - Gemini / Ollama bge-m3 embeddings are 1024d → `embedding_medium` column
+ *  - Legacy 768d embeddings → `embedding_small` column
  *
  * Similarity is computed with pgvector cosine distance (<=>).
  * Results are always scoped to the session to prevent cross-session leakage.
@@ -47,10 +48,15 @@ export async function retrieveRelevantChunks(
   }
 
   const embeddingLiteral = `[${queryEmbedding.join(',')}]`;
+  const is1024d = queryEmbedding.length === 1024;
   const is768d = queryEmbedding.length === 768;
 
   // Use typed column references so Drizzle knows the schema — avoids sql.identifier string risk
-  const vectorCol = is768d ? documents.embeddingSmall : documents.embedding;
+  const vectorCol = is1024d
+    ? documents.embeddingMedium
+    : is768d
+      ? documents.embeddingSmall
+      : documents.embedding;
 
   try {
     const results = await db
@@ -99,6 +105,7 @@ export async function storeDocumentChunk(
     );
   }
 
+  const is1024d = embedding !== null && embedding.length === 1024;
   const is768d = embedding !== null && embedding.length === 768;
   const embeddingModel = EMBEDDING_MODEL_MAP[providerType] ?? 'text-embedding-3-small';
 
@@ -108,7 +115,8 @@ export async function storeDocumentChunk(
     content,
     source,
     embeddingModel,
-    ...(!is768d && embedding ? { embedding: embedding as number[] } : {}),
+    ...(!is768d && !is1024d && embedding ? { embedding: embedding as number[] } : {}),
     ...(is768d && embedding ? { embeddingSmall: embedding as number[] } : {}),
+    ...(is1024d && embedding ? { embeddingMedium: embedding as number[] } : {}),
   });
 }

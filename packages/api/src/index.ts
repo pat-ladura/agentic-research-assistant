@@ -60,8 +60,8 @@ async function main() {
         if (updated) {
           const embeddingModelMap: Record<string, string> = {
             openai: 'text-embedding-3-small',
-            gemini: 'text-embedding-004',
-            ollama: 'nomic-embed-text',
+            gemini: 'bge-m3',
+            ollama: 'bge-m3',
           };
           const embModel = embeddingModelMap[data.provider] ?? 'text-embedding-3-small';
           const memory = agent.getMemory();
@@ -78,6 +78,7 @@ async function main() {
                     'Failed to embed memory entry, storing without embedding'
                   );
                 }
+                const is1024d = embedding && embedding.length === 1024;
                 const is768d = embedding && embedding.length === 768;
                 return {
                   jobId: updated.id,
@@ -85,8 +86,9 @@ async function main() {
                   content: msg.content,
                   sequenceOrder: idx,
                   embeddingModel: embModel,
-                  embedding: !is768d && embedding ? embedding : null,
+                  embedding: !is768d && !is1024d && embedding ? embedding : null,
                   embeddingSmall: is768d && embedding ? embedding : null,
+                  embeddingMedium: is1024d && embedding ? embedding : null,
                 };
               })
             );

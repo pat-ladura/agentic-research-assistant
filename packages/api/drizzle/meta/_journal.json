@@ -36,6 +36,13 @@
       "when": 1776255219847,
       "tag": "0004_awesome_eternals",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1776953919453,
+      "tag": "0005_bge_m3_embedding_medium",
+      "breakpoints": true
     }
   ]
 }

@@ -10,13 +10,13 @@ export interface OllamaConfig {
 export class OllamaProvider implements AIProvider {
   private client: Ollama;
   private model: string;
-  private embeddingModel: string = 'nomic-embed-text';
+  private embeddingModel: string = 'bge-m3';
 
   constructor(config: OllamaConfig = {}) {
     const env = getEnv();
     if (config.cloud) {
       if (!env.OLLAMA_CLOUD_BASE_URL) throw new Error('OLLAMA_CLOUD_BASE_URL is not set');
-      this.model = 'qwen3.5:397b';
+      this.model = 'deepseek-v3.1:671b';
       this.client = new Ollama({
         host: env.OLLAMA_CLOUD_BASE_URL,
         headers: env.OLLAMA_API_KEY ? { Authorization: `Bearer ${env.OLLAMA_API_KEY}` } : {},
@@ -57,8 +57,13 @@ export class OllamaProvider implements AIProvider {
         input: text,
       });
 
+      const raw = response.embeddings[0] ?? [];
+      const sanitized = raw.map((v) => (Number.isFinite(v) ? v : 0));
+      if (sanitized.some((v, i) => v !== raw[i])) {
+        logger.warn({ model: this.embeddingModel }, 'Ollama embedding contained NaN/Infinity — sanitized to 0');
+      }
       logger.debug({ model: this.embeddingModel }, 'Ollama embedding generated');
-      return response.embeddings[0];
+      return sanitized;
     } catch (error) {
       logger.error(error, 'Ollama embedding failed');
       throw new Error(
