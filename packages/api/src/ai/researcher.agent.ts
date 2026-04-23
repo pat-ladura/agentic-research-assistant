@@ -129,7 +129,7 @@ export class ResearcherAgent {
           body: JSON.stringify({
             api_key: TAVILY_API_KEY,
             query,
-            max_results: 4,
+            max_results: 5,
             include_answer: false,
           }),
         });
@@ -166,6 +166,31 @@ export class ResearcherAgent {
       this.emit('search', 'progress', `Stored ${stored} web source chunks for RAG`, { stored });
       logger.debug({ sessionId: this.sessionId, stored }, 'Web source chunks persisted');
     }
+  }
+
+  /**
+   * Normalize the References section to enforce "[Source #] URL" format.
+   * Handles common LLM output variations:
+   *   [1] url  |  1. url  |  Source 1: url  |  [Source 1]: url  |  [Source 1](url)
+   */
+  private normalizeReferences(text: string): string {
+    const refHeader = /^#+\s*references?\s*$/im;
+    const headerMatch = text.match(refHeader);
+    if (!headerMatch) return text;
+
+    const headerIndex = text.indexOf(headerMatch[0]);
+    const before = text.slice(0, headerIndex + headerMatch[0].length);
+    const after = text.slice(headerIndex + headerMatch[0].length);
+
+    // First collapse any existing newlines so refs on one line are split correctly
+    const spaced = after.replace(/(\[Source\s*\d+\]|\[\d+\])\s*(https?:\/\/)/gi, '\n$1 $2');
+
+    const normalized = spaced.replace(
+      /^[\s-]*(?:\[Source\s*(\d+)\]|\[?(\d+)\]?)[\s.:)-]*(?:\(?(https?:\/\/[^\s)]+)\)?)/gim,
+      (_, g1, g2, url) => `\n[Source ${g1 ?? g2}] ${url}`
+    );
+
+    return before + normalized.trimStart();
   }
 
   private async rerankChunks(query: string, chunks: RetrievedChunk[]): Promise<RetrievedChunk[]> {
@@ -304,8 +329,10 @@ export class ResearcherAgent {
       - Details per Sub-question (with citations)
       - Gaps / Uncertainties
       - Conclusion
-      - References (numbered list: [Source #] URL)`,
-
+      - References
+        Format EXACTLY as shown, one per line, no markdown links, no brackets around the URL:
+        [Source 1] https://example.com/page
+        [Source 2] https://another.com/article`,
       systemPrompt
     );
     this.emit('synthesize', 'completed', 'Research complete', { report });
@@ -344,14 +371,17 @@ export class ResearcherAgent {
       REPORT:
       ${report}
 
-      Return a final improved version with better clarity, accuracy, and completeness.`,
+      Return a final improved version with better clarity, accuracy, and completeness.
+      Preserve the References section exactly as-is — do NOT reformat URLs or source numbers.`,
       systemPrompt
     );
 
-    this.emit('refine', 'progress', 'Report improved', { report: improvedReport });
-    this.emit('refine', 'completed', 'Final report ready', { report: improvedReport });
+    const finalReport = this.normalizeReferences(improvedReport);
 
-    return improvedReport;
+    this.emit('refine', 'progress', 'Report improved', { report: finalReport });
+    this.emit('refine', 'completed', 'Final report ready', { report: finalReport });
+
+    return finalReport;
   }
 
   getMemory(): ChatMessage[] {
