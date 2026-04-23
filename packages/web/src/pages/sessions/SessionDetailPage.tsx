@@ -2,8 +2,7 @@ import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useParams, Link, useNavigate } from 'react-router';
 import { useEffect, useRef } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { ReportRenderer } from '@/components/research/ReportRenderer';
 import { useReactToPrint } from 'react-to-print';
 import { researchApi } from '@/api/research.api';
 import { useSSE } from '@/hooks/useSSE';
@@ -103,6 +102,7 @@ export default function SessionDetailPage() {
           )}
         </div>
         {session.description && <p className="mt-1 text-muted-foreground">{session.description}</p>}
+        <p className="mt-1 text-md text-muted-foreground">{session.researchJob?.query}</p>
         <p className="mt-1 text-xs text-muted-foreground">
           {formatDistanceToNow(new Date(session.createdAt), { addSuffix: true })}
         </p>
@@ -130,9 +130,7 @@ export default function SessionDetailPage() {
                 <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '24px' }}>
                   {session.title}
                 </h1>
-                <div className="prose prose-sm dark:prose-invert max-w-none">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{session.result}</ReactMarkdown>
-                </div>
+                <ReportRenderer content={session.result} />
               </div>
             </ScrollArea>
           </CardContent>

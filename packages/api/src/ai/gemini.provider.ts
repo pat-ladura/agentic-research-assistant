@@ -13,7 +13,7 @@ export class GeminiProvider implements AIProvider {
     const env = getEnv();
     if (!env.GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is not set');
     this.client = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
-    this.localEmbedder = new OllamaProvider({ cloud: false }); // nomic-embed-text, 768d
+    this.localEmbedder = new OllamaProvider({ cloud: false }); // bge-m3, 1024d
   }
 
   async chat(messages: ChatMessage[], systemPrompt?: string): Promise<string> {

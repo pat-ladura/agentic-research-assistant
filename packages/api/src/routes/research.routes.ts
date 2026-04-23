@@ -9,7 +9,7 @@ import { researchSessions, researchJobs, researchSteps } from '../db/schema';
 
 // --- SSE guardrail constants ---
 const SSE_HEARTBEAT_MS = 15_000; // ping every 15 s to detect dead connections
-const SSE_MAX_TTL_MS = 10 * 60_000; // hard-close after 10 min to prevent zombie connections
+const SSE_MAX_TTL_MS = 25 * 60_000; // hard-close after 20 min to prevent zombie connections
 
 // Stores cleanup fn per jobId — evict stale connections on reconnect instead of rejecting
 const activeJobStreams = new Map<string, () => void>();
@@ -93,8 +93,8 @@ router.get('/sessions', async (req: Request, res: Response, next: NextFunction) 
 
 const EMBEDDING_DEFAULTS: Record<string, { model: string; dimensions: number }> = {
   openai: { model: 'text-embedding-3-small', dimensions: 1536 },
-  gemini: { model: 'nomic-embed-text', dimensions: 768 },
-  ollama: { model: 'nomic-embed-text', dimensions: 768 },
+  gemini: { model: 'bge-m3', dimensions: 1024 },
+  ollama: { model: 'bge-m3', dimensions: 1024 },
 };
 
 /**
@@ -214,11 +214,15 @@ router.get('/sessions/:id', async (req: Request, res: Response, next: NextFuncti
       .select()
       .from(researchSessions)
       .where(eq(researchSessions.id, sessionId))
+      .leftJoin(researchJobs, eq(researchJobs.sessionId, researchSessions.id))
       .limit(1);
-    if (!session || session.userId !== req.user!.id) {
+    if (!session || session.research_sessions.userId !== req.user!.id) {
       return sendError(res, 404, ErrorCode.NOT_FOUND, 'Session not found');
     }
-    return sendSuccess(res, session);
+    return sendSuccess(res, {
+      ...session.research_sessions,
+      researchJob: session.research_jobs ?? null,
+    });
   } catch (error) {
     next(error);
   }
@@ -656,9 +660,9 @@ router.get('/jobs/:id/stream', async (req: Request, res: Response) => {
         .orderBy(asc(researchSteps.startedAt));
 
       for (const step of steps) {
-        // Skip synthesize here when job is fully done — the terminal event below covers it
-        // to avoid double-emitting synthesize/completed.
-        if (step.stepName === 'synthesize' && job.status === 'completed') continue;
+        // Skip refine here when job is fully done — the terminal event below covers it
+        // to avoid double-emitting refine/completed.
+        if (step.stepName === 'refine' && job.status === 'completed') continue;
 
         if (step.status === 'completed') {
           const replayEvent: JobProgressEvent = {
@@ -682,7 +686,7 @@ router.get('/jobs/:id/stream', async (req: Request, res: Response) => {
       if (job.status === 'completed') {
         const terminalEvent: JobProgressEvent = {
           jobId: id,
-          step: 'synthesize',
+          step: 'refine',
           status: 'completed',
           message: 'Research complete',
           data: { report: job.result },
@@ -738,12 +742,9 @@ router.get('/jobs/:id/stream', async (req: Request, res: Response) => {
     res.write(`data: ${JSON.stringify(event)}\n\n`);
 
     // Cache terminal event and close — reconnecting clients will get it immediately.
-    // Only treat synthesize/completed as the job-terminal event; individual step
+    // Only treat refine/completed as the job-terminal event; individual step
     // completions must not close the stream prematurely.
-    if (
-      (event.step === 'synthesize' && event.status === 'completed') ||
-      event.status === 'failed'
-    ) {
+    if ((event.step === 'refine' && event.status === 'completed') || event.status === 'failed') {
       completedJobCache.set(id, event);
       cleanup();
       res.end();

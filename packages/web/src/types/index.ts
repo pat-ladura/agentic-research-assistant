@@ -73,13 +73,22 @@ export interface PaginationMeta {
 
 export interface JobProgressEvent {
   jobId: string;
-  step: 'decompose' | 'search' | 'summarize' | 'synthesize' | 'agent' | 'stream';
+  step:
+    | 'decompose'
+    | 'search'
+    | 'summarize'
+    | 'synthesize'
+    | 'critique'
+    | 'refine'
+    | 'agent'
+    | 'stream';
   status: 'started' | 'progress' | 'completed' | 'failed';
   message: string;
   data?: {
     subQuestions?: string;
     searchQueries?: string;
     summaries?: string;
+    critique?: string;
     report?: string;
     chunkCount?: number;
   };
