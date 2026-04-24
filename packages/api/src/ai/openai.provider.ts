@@ -87,4 +87,52 @@ export class OpenAIProvider implements AIProvider {
       );
     }
   }
+
+  /**
+   * Rerank documents by relevance to a query using embedding-based cosine similarity.
+   *
+   * Embeds query + all documents in a single batch call (text-embedding-3-small),
+   * then ranks by cosine similarity between the query vector and each doc vector.
+   *
+   * Returns an array of scores aligned to the input documents array.
+   * Returns [] on failure — caller falls back to original order.
+   */
+  async rerank(query: string, documents: string[]): Promise<number[]> {
+    if (documents.length === 0) return [];
+
+    try {
+      const response = await this.client.embeddings.create({
+        model: this.embeddingModel,
+        input: [query, ...documents],
+      });
+
+      // OpenAI returns embeddings in the same order as input
+      const vecs = response.data.map((d) => d.embedding);
+      if (vecs.length !== documents.length + 1) {
+        logger.warn(
+          { model: this.embeddingModel },
+          'OpenAI rerank: unexpected embedding count, falling back'
+        );
+        return [];
+      }
+
+      const queryVec = vecs[0];
+      const dot = (a: number[], b: number[]) => a.reduce((s, v, i) => s + v * b[i], 0);
+      const norm = (a: number[]) => Math.sqrt(a.reduce((s, v) => s + v * v, 0));
+
+      const scores = vecs.slice(1).map((docVec) => {
+        const n = norm(queryVec) * norm(docVec);
+        return n === 0 ? 0 : dot(queryVec, docVec) / n;
+      });
+
+      logger.debug(
+        { model: this.embeddingModel, count: documents.length },
+        'OpenAI rerank complete'
+      );
+      return scores;
+    } catch (error) {
+      logger.warn({ error }, 'OpenAI rerank failed, falling back to original order');
+      return [];
+    }
+  }
 }

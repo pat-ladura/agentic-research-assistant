@@ -7,7 +7,7 @@ import { logger } from '../lib/logger';
 const EMBEDDING_MODEL_MAP: Record<string, string> = {
   openai: 'text-embedding-3-small',
   gemini: 'bge-m3',
-  ollama: 'bge-m3',
+  ollama: 'qwen3-embedding',
 };
 
 /**
@@ -16,6 +16,7 @@ const EMBEDDING_MODEL_MAP: Record<string, string> = {
  * Column selection:
  *  - OpenAI embeddings are 1536d → `embedding` column
  *  - Gemini / Ollama bge-m3 embeddings are 1024d → `embedding_medium` column
+ *  - Ollama qwen3-embedding (8b) embeddings are 4096d → `embedding_large` column
  *  - Legacy 768d embeddings → `embedding_small` column
  *
  * Similarity is computed with pgvector cosine distance (<=>).
@@ -48,15 +49,18 @@ export async function retrieveRelevantChunks(
   }
 
   const embeddingLiteral = `[${queryEmbedding.join(',')}]`;
+  const is4096d = queryEmbedding.length === 4096;
   const is1024d = queryEmbedding.length === 1024;
   const is768d = queryEmbedding.length === 768;
 
   // Use typed column references so Drizzle knows the schema — avoids sql.identifier string risk
-  const vectorCol = is1024d
-    ? documents.embeddingMedium
-    : is768d
-      ? documents.embeddingSmall
-      : documents.embedding;
+  const vectorCol = is4096d
+    ? documents.embeddingLarge
+    : is1024d
+      ? documents.embeddingMedium
+      : is768d
+        ? documents.embeddingSmall
+        : documents.embedding;
 
   try {
     const results = await db
@@ -105,6 +109,7 @@ export async function storeDocumentChunk(
     );
   }
 
+  const is4096d = embedding !== null && embedding.length === 4096;
   const is1024d = embedding !== null && embedding.length === 1024;
   const is768d = embedding !== null && embedding.length === 768;
   const embeddingModel = EMBEDDING_MODEL_MAP[providerType] ?? 'text-embedding-3-small';
@@ -115,8 +120,9 @@ export async function storeDocumentChunk(
     content,
     source,
     embeddingModel,
-    ...(!is768d && !is1024d && embedding ? { embedding: embedding as number[] } : {}),
+    ...(!is768d && !is1024d && !is4096d && embedding ? { embedding: embedding as number[] } : {}),
     ...(is768d && embedding ? { embeddingSmall: embedding as number[] } : {}),
     ...(is1024d && embedding ? { embeddingMedium: embedding as number[] } : {}),
+    ...(is4096d && embedding ? { embeddingLarge: embedding as number[] } : {}),
   });
 }
