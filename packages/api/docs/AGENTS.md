@@ -456,7 +456,7 @@ export interface OllamaConfig {
 export class OllamaProvider implements AIProvider {
   private client: Ollama;
   private model: string; // assigned per-instance: cloud='qwen3.5:397b', local='llama3'
-  private embeddingModel: string = 'nomic-embed-text';
+  private embeddingModel: string = 'qwen3-embedding';
 
   constructor(config: OllamaConfig = {}) {
     const env = getEnv();
@@ -667,7 +667,7 @@ export const researchSessions = pgTable('research_sessions', {
 Note: embedding dimensions differ per provider:
 
 - OpenAI `text-embedding-3-small` → **1536d**
-- Ollama `nomic-embed-text` → **768d**
+- Ollama `qwen3-embedding` → **4096d**
 - Gemini `text-embedding-004` → **768d**
 
 Zero-padding is NOT recommended.
@@ -678,11 +678,11 @@ Embedding model defaults per provider:
 
 - `openai` → `text-embedding-3-small` (1536d) → use `embedding` column
 - `gemini` → `text-embedding-004` (768d) → use `embeddingSmall` column
-- `ollama` → `nomic-embed-text` (768d) → use `embeddingSmall` column
+- `ollama` → `qwen3-embedding` (4096d) → use `embeddingLarge` column
 
 ### Files to modify
 
-**`src/ai/ollama.provider.ts`** — already done in Phase 4: `embeddingModel = 'nomic-embed-text'` is separate from chat model, and `embed()` uses it. No further changes needed.
+**`src/ai/ollama.provider.ts`** — already done in Phase 4: `embeddingModel = 'qwen3-embedding'` is separate from chat model, and `embed()` uses it. No further changes needed.
 
 ### Additional file to update
 
@@ -719,7 +719,7 @@ pnpm db:migrate
 - Schema migration runs without errors
 - `researchSessions` table has `embedding_model`, `embedding_dimensions`, `status`, `result` columns
 - `documents` table has both vector columns (`embedding` 1536d, `embedding_small` 768d)
-- `embed()` call on OllamaProvider uses `nomic-embed-text` (confirm in Ollama logs)
+- `embed()` call on OllamaProvider uses `qwen3-embedding` (confirm in Ollama logs)
 - `embed()` call on GeminiProvider uses `text-embedding-004`
 - `GET /jobs/:id` returns result from DB after server restart (not just in-memory cache)
 

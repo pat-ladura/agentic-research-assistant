@@ -90,6 +90,7 @@ export const memoryEntries = pgTable('memory_entries', {
   embedding: vector('embedding', { dimensions: 1536 }), // OpenAI text-embedding-3-small
   embeddingSmall: vector('embedding_small', { dimensions: 768 }), // Gemini text-embedding-004 (legacy)
   embeddingMedium: vector('embedding_medium', { dimensions: 1024 }), // Gemini / Ollama bge-m3
+  embeddingLarge: vector('embedding_large', { dimensions: 4096 }), // Ollama qwen3-embedding (8b)
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -107,6 +108,7 @@ export const documents = pgTable('documents', {
   embedding: vector('embedding', { dimensions: 1536 }), // OpenAI text-embedding-3-small
   embeddingSmall: vector('embedding_small', { dimensions: 768 }), // Gemini text-embedding-004 (legacy)
   embeddingMedium: vector('embedding_medium', { dimensions: 1024 }), // Gemini / Ollama bge-m3
+  embeddingLarge: vector('embedding_large', { dimensions: 4096 }), // Ollama qwen3-embedding (8b)
   source: text('source'), // URL, file name, etc.
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });

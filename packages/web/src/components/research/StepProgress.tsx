@@ -25,12 +25,12 @@ export const STEP_LABELS: Record<string, string> = {
 };
 
 export const STEP_HINTS: Record<string, string> = {
-  decompose: 'High-reason → selected provider',
-  search: 'High-reason → selected provider',
-  summarize: 'Low-reason → local Ollama',
-  synthesize: 'High-reason → selected provider',
-  critique: 'Low-reason → local Ollama',
-  refine: 'High-reason → selected provider',
+  decompose: 'High impact → selected provider',
+  search: 'High impact → selected provider',
+  summarize: 'Low impact → local Ollama',
+  synthesize: 'High impact → selected provider',
+  critique: 'High impact → selected provider',
+  refine: 'High impact → selected provider',
 };
 
 function StepRow({ step, events }: { step: string; events: JobProgressEvent[] }) {

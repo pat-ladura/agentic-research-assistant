@@ -43,6 +43,20 @@
       "when": 1776953919453,
       "tag": "0005_bge_m3_embedding_medium",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1745510400000,
+      "tag": "0006_qwen3_embedding_large",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1776999069754,
+      "tag": "0007_pale_tyrannus",
+      "breakpoints": true
     }
   ]
 }

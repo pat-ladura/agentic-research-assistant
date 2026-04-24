@@ -2,6 +2,8 @@ import { eq } from 'drizzle-orm';
 import { ChatMessage } from './provider';
 import { getAIProvider, ProviderType } from './index';
 import { HybridProvider, ChatOptions } from './hybrid.provider';
+import { OllamaProvider } from './ollama.provider';
+import { OpenAIProvider } from './openai.provider';
 import { emitJobProgress } from '../queue/job-events';
 import { getDb } from '../config/database';
 import { researchSteps, stepResults } from '../db/schema';
@@ -15,6 +17,7 @@ export class ResearcherAgent {
   private jobId: string; // pg-boss UUID (used for SSE events)
   private dbJobId: number | null; // DB research_jobs.id (used for step persistence)
   private sessionId: number | null; // DB research_sessions.id (used for RAG retrieval)
+  private reranker: OllamaProvider | OpenAIProvider;
 
   constructor(
     jobId: string,
@@ -26,6 +29,8 @@ export class ResearcherAgent {
     this.providerType = providerType;
     this.dbJobId = dbJobId;
     this.sessionId = sessionId;
+    this.reranker =
+      providerType === 'openai' ? new OpenAIProvider() : new OllamaProvider({ cloud: false });
   }
 
   private emit(
@@ -129,7 +134,7 @@ export class ResearcherAgent {
           body: JSON.stringify({
             api_key: TAVILY_API_KEY,
             query,
-            max_results: 5,
+            max_results: 6,
             include_answer: false,
           }),
         });
@@ -209,26 +214,17 @@ export class ResearcherAgent {
   private async rerankChunks(query: string, chunks: RetrievedChunk[]): Promise<RetrievedChunk[]> {
     if (chunks.length === 0) return [];
 
-    const ranked = await this.think(
-      `Query:
-      "${query}"
-
-      Return ONLY the numbers of the top 5 most relevant excerpts (e.g., "1,3,5,2,4"). No explanation.
-
-      Excerpts:
-      ${chunks.map((c, i) => `[${i + 1}] ${c.content}`).join('\n\n')}`,
-      `You are a relevance ranking assistant. Given a query and a list of excerpts, output only a comma-separated list of excerpt numbers ranked by relevance to the query. Output nothing else.`,
-      true // low-reason: ranking is pattern-matching, not deep reasoning
+    const scores = await this.reranker.rerank(
+      query,
+      chunks.map((c) => c.content)
     );
+    if (scores.length === 0) return chunks.slice(0, 5);
 
-    // simple extraction: return top 5 chunks by matching text
-    const indices =
-      ranked
-        .match(/\d+/g)
-        ?.map((n) => parseInt(n, 10) - 1)
-        .filter((i) => i >= 0 && i < chunks.length) ?? [];
-
-    return indices.map((i) => chunks[i]).slice(0, 5);
+    return chunks
+      .map((chunk, i) => ({ chunk, score: scores[i] ?? 0 }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5)
+      .map(({ chunk }) => chunk);
   }
 
   async run(query: string): Promise<string> {
@@ -380,8 +376,7 @@ export class ResearcherAgent {
       - Unclear or incomplete answers
 
       Be concise. Reference field names where relevant.`,
-      systemPrompt,
-      true
+      systemPrompt
     );
     this.emit('critique', 'progress', 'Critique complete', { critique });
     this.emit('critique', 'completed', 'Critique ready', { critique });
