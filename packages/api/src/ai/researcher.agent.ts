@@ -264,12 +264,15 @@ export class ResearcherAgent {
     this.emit('summarize', 'started', 'Summarizing available context');
     const summaries = await this.runStep(
       'summarize',
-      `Based on the sub-questions and intended search queries:
+      `For each sub-question identified above, write a detailed summary using the heading format "Sub-question N summary:" followed by a thorough paragraph.
 
-      - Outline what each sub-question likely requires
-      - DO NOT provide factual answers
-      - Instead, describe what information should be gathered
-      - If unsure, say "Needs external verification"`,
+      For each sub-question summary include:
+      - Key facts, definitions, and explanations directly relevant to the sub-question
+      - Specific statistics, figures, named entities, or data points where known
+      - Distinctions, comparisons, or nuances that matter for answering the sub-question
+      - If a fact is uncertain or requires external verification, note it as "Needs external verification"
+
+      Do NOT omit known facts. Do NOT replace substance with meta-commentary about what should be researched. Write as much factual content as you have available for each sub-question.`,
       systemPrompt,
       true
     );
