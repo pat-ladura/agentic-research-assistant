@@ -1,16 +1,14 @@
 import { useParams, useSearchParams, Link } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { researchApi } from '@/api/research.api';
-import { useEffect, useRef } from 'react';
-import { ReportRenderer } from '@/components/research/ReportRenderer';
-import { useReactToPrint } from 'react-to-print';
+import { useEffect } from 'react';
 import { useSSE } from '@/hooks/useSSE';
 import { StepProgress } from '@/components/research/StepProgress';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ReportCard } from '@/components/research/ReportCard';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, CircleDot, Printer } from 'lucide-react';
+import { ArrowLeft, CircleDot } from 'lucide-react';
 import { ProviderIcon } from '@/components/ui/provider-icon';
 
 export default function JobDetailPage() {
@@ -35,9 +33,6 @@ export default function JobDetailPage() {
 
   const isComplete = status === 'complete' || status === 'failed';
   const title = status === 'complete' ? 'Research Complete' : 'Research in Progress';
-
-  const printRef = useRef<HTMLDivElement>(null);
-  const handlePrint = useReactToPrint({ contentRef: printRef });
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -73,32 +68,7 @@ export default function JobDetailPage() {
 
       <StepProgress events={events} status={status} />
 
-      {report && (
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Research Report</CardTitle>
-            <Button
-              variant="outline"
-              className="cursor-pointer"
-              size="sm"
-              onClick={() => handlePrint()}
-            >
-              <Printer className="mr-1 h-4 w-4" />
-              Print / Save PDF
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <ScrollArea className="h-125 pr-4">
-              <div ref={printRef} style={{ padding: '20px' }}>
-                <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '24px' }}>
-                  {session?.title ?? title}
-                </h1>
-                <ReportRenderer content={report} />
-              </div>
-            </ScrollArea>
-          </CardContent>
-        </Card>
-      )}
+      {report && <ReportCard content={report} title={session?.title ?? title} />}
 
       {failedEvent && (
         <Card className="border-destructive">
