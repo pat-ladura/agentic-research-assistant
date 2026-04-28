@@ -57,6 +57,20 @@
       "when": 1776999069754,
       "tag": "0007_pale_tyrannus",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1745856000000,
+      "tag": "0008_session_opened",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1777389231874,
+      "tag": "0009_bitter_fantastic_four",
+      "breakpoints": true
     }
   ]
 }

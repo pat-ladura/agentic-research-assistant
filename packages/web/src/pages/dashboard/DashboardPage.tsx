@@ -18,6 +18,12 @@ export default function DashboardPage() {
   } = useQuery({
     queryKey: ['sessions'],
     queryFn: () => researchApi.getSessions({ pageSize: 100 }),
+    refetchInterval: (query) => {
+      const sessions = query.state.data?.sessions ?? [];
+      return sessions.some((s: any) => s.status === 'pending' || s.status === 'running')
+        ? 5000
+        : false;
+    },
   });
 
   const { sessions } = data;

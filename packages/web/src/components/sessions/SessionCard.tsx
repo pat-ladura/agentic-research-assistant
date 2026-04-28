@@ -3,6 +3,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ProviderIcon } from '@/components/ui/provider-icon';
+import { cn } from '@/lib/utils';
 
 interface Session {
   id: string;
@@ -13,6 +14,7 @@ interface Session {
   };
   provider: string;
   status: string;
+  opened?: boolean;
 }
 
 interface SessionCardProps {
@@ -20,6 +22,10 @@ interface SessionCardProps {
 }
 
 export function SessionCard({ session }: SessionCardProps) {
+  const isUnread =
+    session.opened === false &&
+    (session.status === 'completed' || session.status === 'failed');
+
   const getBadgeColor = (status: string) => {
     switch (status) {
       case 'completed':
@@ -45,7 +51,13 @@ export function SessionCard({ session }: SessionCardProps) {
       }
       className="block"
     >
-      <Card className="cursor-pointer transition-colors hover:bg-muted/50">
+      <Card
+        className={cn(
+          'cursor-pointer transition-colors hover:bg-muted/50',
+          isUnread && session.status === 'completed' && 'ring-2 ring-green-500',
+          isUnread && session.status === 'failed' && 'ring-2 ring-red-500'
+        )}
+      >
         <CardContent className="flex items-center justify-between">
           <div>
             <p className="font-medium">{session.title}</p>
@@ -57,6 +69,18 @@ export function SessionCard({ session }: SessionCardProps) {
             <Badge variant="outline" className="flex items-center gap-1">
               <ProviderIcon provider={session.provider} /> {session.provider}
             </Badge>
+            {isUnread && (
+              <Badge
+                variant="default"
+                className={
+                  session.status === 'completed'
+                    ? 'bg-green-500 text-white'
+                    : 'bg-red-500 text-white'
+                }
+              >
+                New
+              </Badge>
+            )}
             <Badge variant="default" className={getBadgeColor(session.status)}>
               {session.status}
             </Badge>

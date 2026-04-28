@@ -219,8 +219,24 @@ router.get('/sessions/:id', async (req: Request, res: Response, next: NextFuncti
     if (!session || session.research_sessions.userId !== req.user!.id) {
       return sendError(res, 404, ErrorCode.NOT_FOUND, 'Session not found');
     }
+
+    const sessionData = session.research_sessions;
+
+    // Side-effect: mark opened=true when user fetches a terminal session that was unread
+    if (
+      !sessionData.opened &&
+      (sessionData.status === 'completed' || sessionData.status === 'failed')
+    ) {
+      await db
+        .update(researchSessions)
+        .set({ opened: true })
+        .where(eq(researchSessions.id, sessionId))
+        .catch((err) => logger.warn({ sessionId, err }, 'Could not mark session as opened'));
+      sessionData.opened = true;
+    }
+
     return sendSuccess(res, {
-      ...session.research_sessions,
+      ...sessionData,
       researchJob: session.research_jobs ?? null,
     });
   } catch (error) {
@@ -290,10 +306,10 @@ router.post('/sessions/:id/retry', async (req: Request, res: Response, next: Nex
       return sendError(res, 400, ErrorCode.VALIDATION_ERROR, 'No previous job found for session');
     }
 
-    // Reset session to pending
+    // Reset session to pending and mark as unread
     await db
       .update(researchSessions)
-      .set({ status: 'pending', result: null, updatedAt: new Date() })
+      .set({ status: 'pending', result: null, opened: false, updatedAt: new Date() })
       .where(eq(researchSessions.id, sessionId));
 
     // Enqueue new job with same query + provider
@@ -493,6 +509,13 @@ router.post('/query', async (req: Request, res: Response, next: NextFunction) =>
       query,
       status: 'pending',
     });
+
+    // Mark session as unread — user will be notified when they return to dashboard/sessions
+    await db
+      .update(researchSessions)
+      .set({ opened: false })
+      .where(eq(researchSessions.id, sessionIdNum))
+      .catch((err) => logger.warn({ jobId, err }, 'Could not mark session as unopened'));
 
     logger.info({ jobId, sessionId: sessionIdNum, query, provider }, 'Research query queued');
     return sendSuccess(

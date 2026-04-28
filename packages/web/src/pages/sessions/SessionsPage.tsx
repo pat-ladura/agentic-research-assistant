@@ -18,6 +18,12 @@ export default function SessionsPage() {
   } = useQuery({
     queryKey: ['sessions', page, debouncedSearch],
     queryFn: () => researchApi.getSessions({ page, search: debouncedSearch || undefined }),
+    refetchInterval: (query) => {
+      const sessions = query.state.data?.sessions ?? [];
+      return sessions.some((s: any) => s.status === 'pending' || s.status === 'running')
+        ? 5000
+        : false;
+    },
   });
 
   // Debounce search 300ms
