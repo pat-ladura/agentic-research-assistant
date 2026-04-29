@@ -29,6 +29,7 @@ export const researchSessions = pgTable('research_sessions', {
   embeddingDimensions: integer('embedding_dimensions').notNull().default(1536),
   status: text('status').notNull().default('pending'), // 'pending' | 'running' | 'completed' | 'failed'
   result: text('result'), // final synthesized report
+  opened: boolean('opened').default(true).notNull(), // false = unread completed/failed result
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

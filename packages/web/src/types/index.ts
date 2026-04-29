@@ -50,6 +50,7 @@ export interface ResearchSession {
   embeddingModel: string;
   status: 'pending' | 'processing' | 'completed' | 'failed';
   result?: string;
+  opened: boolean;
   createdAt: string;
   updatedAt: string;
 }
