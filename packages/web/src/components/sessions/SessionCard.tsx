@@ -23,8 +23,7 @@ interface SessionCardProps {
 
 export function SessionCard({ session }: SessionCardProps) {
   const isUnread =
-    session.opened === false &&
-    (session.status === 'completed' || session.status === 'failed');
+    session.opened === false && (session.status === 'completed' || session.status === 'failed');
 
   const getBadgeColor = (status: string) => {
     switch (status) {
