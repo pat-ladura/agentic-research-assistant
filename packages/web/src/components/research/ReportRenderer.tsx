@@ -18,6 +18,7 @@ interface SubQuestion {
 }
 
 interface StructuredReport {
+  introduction?: string;
   executive_summary?: string;
   key_findings?: KeyFinding[];
   sub_questions?: SubQuestion[];
@@ -70,6 +71,13 @@ function StructuredReportView({ report }: { report: StructuredReport }) {
 
   return (
     <div className="space-y-6 text-sm">
+      {report.introduction && (
+        <section>
+          <h2 className="text-base font-semibold mb-2">Introduction</h2>
+          <p className="text-muted-foreground leading-relaxed">{report.introduction}</p>
+        </section>
+      )}
+
       {report.executive_summary && (
         <section>
           <h2 className="text-base font-semibold mb-2">Executive Summary</h2>

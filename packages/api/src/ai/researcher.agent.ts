@@ -123,50 +123,62 @@ export class ResearcherAgent {
     if (queries.length === 0) return;
 
     const provider = getAIProvider(this.providerType);
+
+    // Fetch all queries in parallel, each returns its raw results array
+    const allResults = await Promise.all(
+      queries.map(async (query) => {
+        try {
+          const res = await fetch('https://api.tavily.com/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              api_key: TAVILY_API_KEY,
+              query,
+              max_results: 6,
+              include_answer: false,
+            }),
+          });
+
+          if (!res.ok) {
+            logger.warn({ query, status: res.status }, 'Tavily search returned non-OK status');
+            return [] as Array<{ title: string; url: string; content: string; query: string }>;
+          }
+
+          const data = (await res.json()) as {
+            results: Array<{ title: string; url: string; content: string }>;
+          };
+
+          return (data.results ?? []).map((r) => ({ ...r, query }));
+        } catch (err) {
+          logger.warn({ query, err }, 'Web search fetch failed, skipping query');
+          return [] as Array<{ title: string; url: string; content: string; query: string }>;
+        }
+      })
+    );
+
+    // Flatten, deduplicate by URL, then store all chunks in parallel
     const seenUrls = new Set<string>();
-    let stored = 0;
+    const deduped = allResults.flat().filter((result) => {
+      if (!result.content) return false;
+      if (result.url && seenUrls.has(result.url)) return false;
+      if (result.url) seenUrls.add(result.url);
+      return true;
+    });
 
-    for (const query of queries) {
-      try {
-        const res = await fetch('https://api.tavily.com/search', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            api_key: TAVILY_API_KEY,
-            query,
-            max_results: 6,
-            include_answer: false,
-          }),
-        });
+    await Promise.all(
+      deduped.map((result) =>
+        storeDocumentChunk(
+          this.sessionId!,
+          result.title ?? result.query,
+          result.content,
+          result.url ?? result.query,
+          provider,
+          this.providerType
+        )
+      )
+    );
 
-        if (!res.ok) {
-          logger.warn({ query, status: res.status }, 'Tavily search returned non-OK status');
-          continue;
-        }
-
-        const data = (await res.json()) as {
-          results: Array<{ title: string; url: string; content: string }>;
-        };
-
-        for (const result of data.results ?? []) {
-          if (!result.content) continue;
-          if (result.url && seenUrls.has(result.url)) continue;
-          if (result.url) seenUrls.add(result.url);
-          await storeDocumentChunk(
-            this.sessionId!,
-            result.title ?? query,
-            result.content,
-            result.url ?? query,
-            provider,
-            this.providerType
-          );
-          stored++;
-        }
-      } catch (err) {
-        logger.warn({ query, err }, 'Web search fetch failed, skipping query');
-      }
-    }
-
+    const stored = deduped.length;
     if (stored > 0) {
       this.emit('search', 'progress', `Stored ${stored} web source chunks for RAG`, { stored });
       logger.debug({ sessionId: this.sessionId, stored }, 'Web source chunks persisted');
@@ -260,6 +272,26 @@ export class ResearcherAgent {
 
     this.emit('search', 'completed', 'Search queries ready', { searchQueries });
 
+    // RAG: prime summarize with real web chunks so the LLM isn't working from internal
+    // knowledge alone. Smaller topK (10) — no rerank needed, just context injection.
+    if (this.sessionId !== null) {
+      const provider = getAIProvider(this.providerType);
+      const primeChunks = await retrieveRelevantChunks(query, this.sessionId, provider, 10);
+      if (primeChunks.length > 0) {
+        this.memory.push({
+          role: 'user',
+          content: `Here are web excerpts to inform your summaries:\n\n${primeChunks.map((c, i) => `[Source ${i + 1}] (${c.source})\n${c.content}`).join('\n\n---\n\n')}`,
+        });
+        this.memory.push({
+          role: 'assistant',
+          content: 'Understood. I will use these excerpts to ground my sub-question summaries.',
+        });
+        this.emit('summarize', 'progress', 'Injected web context before summarize', {
+          chunkCount: primeChunks.length,
+        });
+      }
+    }
+
     // Step 3: Summarize — low-reason, offloads to local Ollama
     this.emit('summarize', 'started', 'Summarizing available context');
     const summaries = await this.runStep(
@@ -282,12 +314,28 @@ export class ResearcherAgent {
     // Step 4: Synthesize — final step emits 'completed' to close the SSE stream
     this.emit('synthesize', 'started', 'Synthesizing final report');
 
-    // RAG: inject relevant document chunks into memory before the AI call
+    // RAG: inject relevant document chunks into memory before the AI call.
+    // Retrieve against the original query AND each sub-question for broader recall,
+    // then rerank the merged pool down to the top 5 against the original query.
     if (this.sessionId !== null) {
       const provider = getAIProvider(this.providerType);
-      const retrievedChunks = await retrieveRelevantChunks(query, this.sessionId, provider);
-      const rankedChunks = await this.rerankChunks(query, retrievedChunks);
-      // Deduplicate by source URL — keep the highest-ranked chunk per URL
+      const parsedSubQuestions = this.parseNumberedList(subQuestions);
+      const allQueries = [query, ...parsedSubQuestions];
+
+      const chunkSets = await Promise.all(
+        allQueries.map((q) => retrieveRelevantChunks(q, this.sessionId!, provider, 20))
+      );
+
+      // Flatten, deduplicate by source URL before reranking
+      const seenBeforeRerank = new Set<string>();
+      const mergedChunks = chunkSets.flat().filter((c) => {
+        if (seenBeforeRerank.has(c.source)) return false;
+        seenBeforeRerank.add(c.source);
+        return true;
+      });
+
+      const rankedChunks = await this.rerankChunks(query, mergedChunks);
+      // Final dedup pass (rerank may surface same source via different sub-question)
       const seenSources = new Set<string>();
       const relevantChunks = rankedChunks.filter((c) => {
         if (seenSources.has(c.source)) return false;
@@ -330,6 +378,7 @@ export class ResearcherAgent {
 
         Schema:
         {
+          "introduction": "string",
           "executive_summary": "string",
           "key_findings": [
             {
@@ -373,7 +422,7 @@ export class ResearcherAgent {
 
       ${report}
 
-      Identify issues in any field (executive_summary, key_findings, sub_questions, gaps, conclusion):
+      Identify issues in any field (introduction, executive_summary, key_findings, sub_questions, gaps, conclusion):
       - Unsupported claims
       - Missing information
       - Unclear or incomplete answers
