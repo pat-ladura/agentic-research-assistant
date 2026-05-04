@@ -1,24 +1,29 @@
 import { AIProvider, ChatMessage } from './provider';
 import { OllamaProvider } from './ollama.provider';
 import { logger } from '../lib/logger';
-import { GeminiProvider } from './gemini.provider';
 
 export interface ChatOptions {
   lowReason?: boolean; // true = route to local Ollama
+}
+
+export interface HybridProviderConfig {
+  useLocalForLowReason?: boolean; // default true; set false when primary is already local
 }
 
 export class HybridProvider implements AIProvider {
   private primary: AIProvider;
   private local: OllamaProvider;
   private localAvailable: boolean = true;
+  private useLocalForLowReason: boolean;
 
-  constructor(primary: AIProvider) {
+  constructor(primary: AIProvider, config: HybridProviderConfig = {}) {
     this.primary = primary;
+    this.useLocalForLowReason = config.useLocalForLowReason ?? true;
     this.local = new OllamaProvider({ cloud: false }); // always local for low-reason offload
   }
 
   async chat(messages: ChatMessage[], systemPrompt?: string, opts?: ChatOptions): Promise<string> {
-    if (opts?.lowReason && this.localAvailable) {
+    if (opts?.lowReason && this.useLocalForLowReason && this.localAvailable) {
       try {
         return await this.local.chat(messages, systemPrompt);
       } catch {
@@ -30,9 +35,9 @@ export class HybridProvider implements AIProvider {
   }
 
   async embed(text: string): Promise<number[]> {
-    // Ollama primary → embeddings use local Ollama (bge-m3)
-    // OpenAI / Gemini primary → embeddings use their respective cloud provider
-    if (this.primary instanceof OllamaProvider || this.primary instanceof GeminiProvider) {
+    // OllamaProvider primary → embeddings use local Ollama (qwen3-embedding)
+    // OpenAI primary → embeddings use their respective cloud provider
+    if (this.primary instanceof OllamaProvider) {
       return this.local.embed(text);
     }
     return this.primary.embed(text);

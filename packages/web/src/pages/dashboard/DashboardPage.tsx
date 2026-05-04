@@ -9,7 +9,7 @@ import { ProviderIcon } from '@/components/ui/provider-icon';
 import { FlaskConical, History } from 'lucide-react';
 import { SessionCard } from '@/components/sessions/SessionCard';
 
-const PROVIDERS = ['openai', 'gemini', 'ollama'];
+const PROVIDERS = ['openai', 'ollama', 'ollama-local'];
 
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);

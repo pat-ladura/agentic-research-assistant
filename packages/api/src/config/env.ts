@@ -7,7 +7,6 @@ const EnvSchema = z.object({
   API_KEY: z.string().min(1, 'API_KEY is required'),
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
   OPENAI_API_KEY: z.string().optional(),
-  GEMINI_API_KEY: z.string().optional(),
   OLLAMA_API_KEY: z.string().optional(),
   TAVILY_API_KEY: z.string().optional(),
   OLLAMA_BASE_URL: z.url('Invalid OLLAMA_BASE_URL').default('http://localhost:11434'),

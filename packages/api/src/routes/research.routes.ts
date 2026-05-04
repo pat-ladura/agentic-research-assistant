@@ -93,8 +93,8 @@ router.get('/sessions', async (req: Request, res: Response, next: NextFunction) 
 
 const EMBEDDING_DEFAULTS: Record<string, { model: string; dimensions: number }> = {
   openai: { model: 'text-embedding-3-small', dimensions: 1536 },
-  gemini: { model: 'bge-m3', dimensions: 1024 },
-  ollama: { model: 'bge-m3', dimensions: 1024 },
+  ollama: { model: 'qwen3-embedding', dimensions: 1024 },
+  'ollama-local': { model: 'qwen3-embedding', dimensions: 1024 },
 };
 
 /**
@@ -125,7 +125,7 @@ const EMBEDDING_DEFAULTS: Record<string, { model: string; dimensions: number }> 
  *                 example: Exploring the latest findings on climate change
  *               provider:
  *                 type: string
- *                 enum: [openai, gemini, ollama]
+ *                 enum: [openai, ollama, ollama-local]
  *                 default: openai
  *                 example: openai
  *     responses:
@@ -317,7 +317,7 @@ router.post('/sessions/:id/retry', async (req: Request, res: Response, next: Nex
     const jobId = await queue.enqueue('research-job', {
       sessionId,
       query: lastJob.query,
-      provider: session.provider as 'openai' | 'gemini' | 'ollama',
+      provider: session.provider as 'openai' | 'ollama' | 'ollama-local',
     });
 
     await db.insert(researchJobs).values({
@@ -452,7 +452,7 @@ router.get('/sessions/:id/jobs', async (req: Request, res: Response, next: NextF
  *                 example: What are the latest breakthroughs in quantum computing?
  *               provider:
  *                 type: string
- *                 enum: [openai, gemini, ollama]
+ *                 enum: [openai, ollama, ollama-local]
  *                 default: openai
  *                 example: openai
  *     responses:

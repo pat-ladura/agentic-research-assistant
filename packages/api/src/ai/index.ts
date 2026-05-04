@@ -1,12 +1,11 @@
 import { AIProvider } from './provider';
 import { OllamaProvider } from './ollama.provider';
 import { OpenAIProvider } from './openai.provider';
-import { GeminiProvider } from './gemini.provider';
 import { HybridProvider } from './hybrid.provider';
 import { getEnv } from '../config/env';
 import { logger } from '../lib/logger';
 
-export type ProviderType = 'openai' | 'gemini' | 'ollama';
+export type ProviderType = 'openai' | 'ollama' | 'ollama-local';
 
 // Cache keyed by provider type — each provider type gets its own singleton
 const providerCache = new Map<ProviderType, AIProvider>();
@@ -19,16 +18,20 @@ export function getAIProvider(providerType: ProviderType = 'openai'): AIProvider
 
   switch (providerType) {
     case 'openai':
-      provider = new HybridProvider(new OpenAIProvider());
+      provider = new HybridProvider(new OpenAIProvider(), { useLocalForLowReason: true });
       logger.info('Initialized OpenAI provider with local Ollama offload');
       break;
-    case 'gemini':
-      provider = new HybridProvider(new GeminiProvider());
-      logger.info('Initialized Gemini provider with local Ollama offload');
-      break;
     case 'ollama':
-      provider = new HybridProvider(new OllamaProvider({ cloud: true }));
+      provider = new HybridProvider(new OllamaProvider({ cloud: true }), {
+        useLocalForLowReason: true,
+      });
       logger.info('Initialized Ollama Cloud provider with local Ollama offload');
+      break;
+    case 'ollama-local':
+      provider = new HybridProvider(new OllamaProvider({ cloud: false }), {
+        useLocalForLowReason: false,
+      });
+      logger.info('Initialized Ollama Local provider (no offload)');
       break;
     default:
       throw new Error(`Unknown AI provider type: ${providerType}`);

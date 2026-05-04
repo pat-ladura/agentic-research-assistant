@@ -292,7 +292,7 @@ export class ResearcherAgent {
       }
     }
 
-    // Step 3: Summarize — low-reason, offloads to local Ollama
+    // Step 3: Summarize — uses primary provider for consistency
     this.emit('summarize', 'started', 'Summarizing available context');
     const summaries = await this.runStep(
       'summarize',
@@ -306,7 +306,7 @@ export class ResearcherAgent {
 
       Do NOT omit known facts. Do NOT replace substance with meta-commentary about what should be researched. Write as much factual content as you have available for each sub-question.`,
       systemPrompt,
-      true
+      false
     );
     this.emit('summarize', 'progress', 'Summaries complete', { summaries });
     this.emit('summarize', 'completed', 'Summaries ready', { summaries });

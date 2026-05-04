@@ -16,8 +16,8 @@ import { researchApi } from '@/api/research.api';
 
 const PROVIDERS = [
   { value: 'openai', label: 'OpenAI (gpt-4o-mini)' },
-  { value: 'gemini', label: 'Gemini (gemini-2.5-flash)' },
-  { value: 'ollama', label: 'Ollama Cloud (deepseek-v3.1:671b)' },
+  { value: 'ollama', label: 'Ollama Cloud (deepseek-v3.2)' },
+  { value: 'ollama-local', label: 'Ollama Local (llama3)' },
 ];
 
 export default function NewResearchPage() {

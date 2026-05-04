@@ -6,8 +6,8 @@ import { logger } from '../lib/logger';
 
 const EMBEDDING_MODEL_MAP: Record<string, string> = {
   openai: 'text-embedding-3-small',
-  gemini: 'bge-m3',
   ollama: 'qwen3-embedding',
+  'ollama-local': 'qwen3-embedding',
 };
 
 /**
@@ -15,7 +15,7 @@ const EMBEDDING_MODEL_MAP: Record<string, string> = {
  *
  * Column selection:
  *  - OpenAI embeddings are 1536d → `embedding` column
- *  - Gemini / Ollama bge-m3 embeddings are 1024d → `embedding_medium` column
+ *  - Ollama qwen3-embedding embeddings are 1024d → `embedding_medium` column (ollama / ollama-local)
  *  - Ollama qwen3-embedding (8b) embeddings are 4096d → `embedding_large` column
  *  - Legacy 768d embeddings → `embedding_small` column
  *
