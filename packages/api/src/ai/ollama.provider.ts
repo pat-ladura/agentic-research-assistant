@@ -16,7 +16,7 @@ export class OllamaProvider implements AIProvider {
     const env = getEnv();
     if (config.cloud) {
       if (!env.OLLAMA_CLOUD_BASE_URL) throw new Error('OLLAMA_CLOUD_BASE_URL is not set');
-      this.model = 'deepseek-v3.2:cloud';
+      this.model = 'gemma4:31b-cloud';
       this.client = new Ollama({
         host: env.OLLAMA_CLOUD_BASE_URL,
         headers: env.OLLAMA_API_KEY ? { Authorization: `Bearer ${env.OLLAMA_API_KEY}` } : {},

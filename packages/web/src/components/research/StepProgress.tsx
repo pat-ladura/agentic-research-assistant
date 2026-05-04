@@ -27,7 +27,7 @@ export const STEP_LABELS: Record<string, string> = {
 export const STEP_HINTS: Record<string, string> = {
   decompose: 'High impact → selected provider',
   search: 'High impact → selected provider',
-  summarize: 'Low impact → local Ollama',
+  summarize: 'High impact → selected provider',
   synthesize: 'High impact → selected provider',
   critique: 'High impact → selected provider',
   refine: 'High impact → selected provider',
