@@ -22,7 +22,6 @@ export class OllamaProvider implements AIProvider {
         headers: env.OLLAMA_API_KEY ? { Authorization: `Bearer ${env.OLLAMA_API_KEY}` } : {},
       });
     } else {
-      // local — low-reason offload
       this.model = 'llama3';
       this.client = new Ollama({ host: env.OLLAMA_BASE_URL });
     }

@@ -19,7 +19,7 @@ export class HybridProvider implements AIProvider {
   constructor(primary: AIProvider, config: HybridProviderConfig = {}) {
     this.primary = primary;
     this.useLocalForLowReason = config.useLocalForLowReason ?? true;
-    this.local = new OllamaProvider({ cloud: false }); // always local for low-reason offload
+    this.local = new OllamaProvider({ cloud: false });
   }
 
   async chat(messages: ChatMessage[], systemPrompt?: string, opts?: ChatOptions): Promise<string> {
