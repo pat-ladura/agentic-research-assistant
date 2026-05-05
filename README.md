@@ -164,4 +164,4 @@ docker compose down
 
 ## Design Document
 
-For architecture decisions and implementation details, see the [Design Document](https://docs.google.com/document/d/11rSkNOKnMKpk8A2TJ1UzcBPQpkfQdzwgMEzCojZqJ94/edit?usp=drive_link).
+For architecture decisions and implementation details, see the [Design Document](https://docs.google.com/document/d/11Hgp4jwIBSWIs5j-sIw_H5dMm5f-Zj_pbpUOYH3BGPw/edit?usp=sharing).
