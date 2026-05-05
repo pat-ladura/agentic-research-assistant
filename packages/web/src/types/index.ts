@@ -46,7 +46,7 @@ export interface ResearchSession {
   researchJob: ResearchJob | null;
   title: string;
   description?: string;
-  provider: 'openai' | 'gemini' | 'ollama';
+  provider: 'openai' | 'ollama' | 'ollama-local';
   embeddingModel: string;
   status: 'pending' | 'processing' | 'completed' | 'failed';
   result?: string;

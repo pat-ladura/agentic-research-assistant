@@ -68,7 +68,7 @@ const options = {
             userId: { type: 'integer' },
             title: { type: 'string' },
             description: { type: 'string', nullable: true },
-            provider: { type: 'string', enum: ['openai', 'gemini', 'ollama'] },
+            provider: { type: 'string', enum: ['openai', 'ollama', 'ollama-local'] },
             embeddingModel: { type: 'string' },
             embeddingDimensions: { type: 'integer' },
             status: { type: 'string', enum: ['pending', 'running', 'completed', 'failed'] },

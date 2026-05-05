@@ -1,7 +1,7 @@
 export interface ResearchJobData {
   sessionId: number;
   query: string;
-  provider: 'openai' | 'gemini' | 'ollama';
+  provider: 'openai' | 'ollama' | 'ollama-local';
 }
 
 export interface QueueProvider {

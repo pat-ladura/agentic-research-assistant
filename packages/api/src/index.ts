@@ -60,13 +60,13 @@ async function main() {
         if (updated) {
           const embeddingModelMap: Record<string, string> = {
             openai: 'text-embedding-3-small',
-            gemini: 'bge-m3',
             ollama: 'qwen3-embedding',
+            'ollama-local': 'qwen3-embedding',
           };
           const embModel = embeddingModelMap[data.provider] ?? 'text-embedding-3-small';
           const memory = agent.getMemory();
           if (memory.length > 0) {
-            const provider = getAIProvider(data.provider as 'openai' | 'gemini' | 'ollama');
+            const provider = getAIProvider(data.provider as 'openai' | 'ollama' | 'ollama-local');
             const rows = await Promise.all(
               memory.map(async (msg, idx) => {
                 let embedding: number[] | null = null;

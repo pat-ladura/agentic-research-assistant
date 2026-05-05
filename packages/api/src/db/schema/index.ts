@@ -24,7 +24,7 @@ export const researchSessions = pgTable('research_sessions', {
   userId: integer('user_id').notNull(),
   title: text('title').notNull(),
   description: text('description'),
-  provider: text('provider').notNull().default('openai'), // 'openai' | 'gemini' | 'ollama'
+  provider: text('provider').notNull().default('openai'), // 'openai' | 'ollama' | 'ollama-local'
   embeddingModel: text('embedding_model').notNull().default('text-embedding-3-small'),
   embeddingDimensions: integer('embedding_dimensions').notNull().default(1536),
   status: text('status').notNull().default('pending'), // 'pending' | 'running' | 'completed' | 'failed'
@@ -89,8 +89,8 @@ export const memoryEntries = pgTable('memory_entries', {
   sequenceOrder: integer('sequence_order').notNull(),
   embeddingModel: text('embedding_model').notNull(), // track which model created this
   embedding: vector('embedding', { dimensions: 1536 }), // OpenAI text-embedding-3-small
-  embeddingSmall: vector('embedding_small', { dimensions: 768 }), // Gemini text-embedding-004 (legacy)
-  embeddingMedium: vector('embedding_medium', { dimensions: 1024 }), // Gemini / Ollama bge-m3
+  embeddingSmall: vector('embedding_small', { dimensions: 768 }), // legacy 768d
+  embeddingMedium: vector('embedding_medium', { dimensions: 1024 }), // Ollama qwen3-embedding 1024d
   embeddingLarge: vector('embedding_large', { dimensions: 4096 }), // Ollama qwen3-embedding (8b)
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
@@ -107,8 +107,8 @@ export const documents = pgTable('documents', {
   content: text('content').notNull(),
   embeddingModel: text('embedding_model').notNull(), // track which model created this
   embedding: vector('embedding', { dimensions: 1536 }), // OpenAI text-embedding-3-small
-  embeddingSmall: vector('embedding_small', { dimensions: 768 }), // Gemini text-embedding-004 (legacy)
-  embeddingMedium: vector('embedding_medium', { dimensions: 1024 }), // Gemini / Ollama bge-m3
+  embeddingSmall: vector('embedding_small', { dimensions: 768 }), // legacy 768d
+  embeddingMedium: vector('embedding_medium', { dimensions: 1024 }), // Ollama qwen3-embedding 1024d
   embeddingLarge: vector('embedding_large', { dimensions: 4096 }), // Ollama qwen3-embedding (8b)
   source: text('source'), // URL, file name, etc.
   createdAt: timestamp('created_at').defaultNow().notNull(),

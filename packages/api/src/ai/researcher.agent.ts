@@ -192,14 +192,21 @@ export class ResearcherAgent {
    */
   private normalizeReferences(text: string): string {
     // JSON reports don't need markdown reference normalization — return as-is
-    // (strip any accidental code fences the LLM may have added)
+    // Strip code fences and any leading prose the LLM may have added before the JSON object.
+    const stripped = text
+      .trim()
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```$/, '');
+
+    // Extract the JSON object — find the first '{' and last '}' to discard leading/trailing prose
+    const jsonStart = stripped.indexOf('{');
+    const jsonEnd = stripped.lastIndexOf('}');
+    const candidate =
+      jsonStart !== -1 && jsonEnd > jsonStart ? stripped.slice(jsonStart, jsonEnd + 1) : stripped;
+
     try {
-      const stripped = text
-        .trim()
-        .replace(/^```(?:json)?\s*/i, '')
-        .replace(/\s*```$/, '');
-      JSON.parse(stripped);
-      return stripped;
+      JSON.parse(candidate);
+      return candidate;
     } catch {
       // not JSON — apply legacy markdown normalization
     }
@@ -292,7 +299,7 @@ export class ResearcherAgent {
       }
     }
 
-    // Step 3: Summarize — low-reason, offloads to local Ollama
+    // Step 3: Summarize — uses primary provider for consistency
     this.emit('summarize', 'started', 'Summarizing available context');
     const summaries = await this.runStep(
       'summarize',
@@ -306,7 +313,7 @@ export class ResearcherAgent {
 
       Do NOT omit known facts. Do NOT replace substance with meta-commentary about what should be researched. Write as much factual content as you have available for each sub-question.`,
       systemPrompt,
-      true
+      false
     );
     this.emit('summarize', 'progress', 'Summaries complete', { summaries });
     this.emit('summarize', 'completed', 'Summaries ready', { summaries });
@@ -411,7 +418,8 @@ export class ResearcherAgent {
       `,
       systemPrompt
     );
-    this.emit('synthesize', 'completed', 'Research complete', { report });
+    const cleanReport = this.normalizeReferences(report);
+    this.emit('synthesize', 'completed', 'Research complete', { report: cleanReport });
 
     // Step 5: Critique
     this.emit('critique', 'started', 'Reviewing report for quality');
@@ -420,7 +428,7 @@ export class ResearcherAgent {
       'critique',
       `Critique the following JSON-structured research report:
 
-      ${report}
+      ${cleanReport}
 
       Identify issues in any field (introduction, executive_summary, key_findings, sub_questions, gaps, conclusion):
       - Unsupported claims
@@ -444,7 +452,7 @@ export class ResearcherAgent {
       ${critique}
 
       REPORT (JSON):
-      ${report}
+      ${cleanReport}
 
       Return ONLY valid JSON. No extra text. Use the exact same schema.
       Improve content within each field for clarity, accuracy, and completeness.
