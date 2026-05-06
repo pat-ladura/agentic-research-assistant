@@ -84,10 +84,6 @@ export default function NewResearchPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
-                High-reasoning steps use the selected provider. Summarization always uses local
-                Ollama.
-              </p>
             </div>
 
             <div className="space-y-1">
