@@ -293,7 +293,7 @@ export class ResearcherAgent {
           role: 'assistant',
           content: 'Understood. I will use these excerpts to ground my sub-question summaries.',
         });
-        this.emit('summarize', 'progress', 'Injected web context before summarize', {
+        this.emit('summarize', 'started', 'Injected web context before summarize', {
           chunkCount: primeChunks.length,
         });
       }
