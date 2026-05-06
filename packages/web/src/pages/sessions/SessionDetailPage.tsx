@@ -49,6 +49,13 @@ export default function SessionDetailPage() {
     }
   }, [sseStatus, id, queryClient]);
 
+  // Invalidate sessions list when leaving so opened flag + status are fresh
+  useEffect(() => {
+    return () => {
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
+    };
+  }, [queryClient]);
+
   if (isLoading) return <div className="text-muted-foreground">Loading session...</div>;
   if (!session) return <div className="text-muted-foreground">Session not found.</div>;
 
