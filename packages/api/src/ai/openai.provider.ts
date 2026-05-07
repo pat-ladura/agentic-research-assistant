@@ -5,7 +5,7 @@ import { getEnv } from '../config/env';
 
 export class OpenAIProvider implements AIProvider {
   private client: OpenAI;
-  private model: string = 'gpt-4o-mini';
+  private model: string = 'gpt-5.4-mini';
   private embeddingModel: string = 'text-embedding-3-small';
 
   constructor() {

@@ -16,7 +16,7 @@ A full-stack monorepo for an agentic AI research assistant. Submit research quer
 - **Runtime**: Node.js 20, TypeScript (strict)
 - **Framework**: Express.js
 - **Database**: PostgreSQL 16 + pgvector, Drizzle ORM
-- **AI Providers**: OpenAI GPT-4o-mini, Ollama Cloud (gemma4:31b), Ollama Local (llama3); hybrid routing offloads low-reasoning tasks to local Ollama
+- **AI Providers**: OpenAI gpt-5.4-mini, Ollama Cloud (gemma4:31b), Ollama Local (llama3); hybrid routing offloads low-reasoning tasks to local Ollama
 - **Auth**: JWT + API key middleware
 - **Logging**: Pino structured JSON logging
 
@@ -154,7 +154,7 @@ docker compose down
 
 ## Features
 
-- **Multi-provider AI** — switch between OpenAI (GPT-4o-mini), Ollama Cloud (gemma4:31b), and Ollama Local (llama3) per research job
+- **Multi-provider AI** — switch between OpenAI (gpt-5.4-mini), Ollama Cloud (gemma4:31b), and Ollama Local (llama3) per research job
 - **Research sessions** — organize queries into persistent, titled sessions
 - **Real-time tracking** — live job status updates via Server-Sent Events
 - **Secure auth** — JWT-based authentication with protected routes

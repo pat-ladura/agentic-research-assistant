@@ -28,7 +28,7 @@ Three selectable provider types, each backed by a `HybridProvider`:
 
 | Type | Primary Model | Low-Reason Offload | Embedding Model |
 |---|---|---|---|
-| `openai` | OpenAI `gpt-4o-mini` | → Local Ollama `llama3` | `text-embedding-3-small` (1536d) |
+| `openai` | OpenAI `gpt-5.4-mini` | → Local Ollama `llama3` | `text-embedding-3-small` (1536d) |
 | `ollama` | Ollama Cloud `gemma4:31b` | → Local Ollama `llama3` | `qwen3-embedding` (1024d) |
 | `ollama-local` | Local Ollama `llama3` | none (already local) | `qwen3-embedding` (1024d) |
 
@@ -140,7 +140,7 @@ Decompose → Search (+ Tavily fetch) → Summarize (+ RAG prime) → Synthesize
 
 | Role | Provider | Model |
 |---|---|---|
-| Chat (high-reason) | OpenAI | `gpt-4o-mini` |
+| Chat (high-reason) | OpenAI | `gpt-5.4-mini` |
 | Chat (high-reason) | Ollama Cloud | `gemma4:31b` |
 | Chat (low-reason / offload) | Ollama Local | `llama3` |
 | Embeddings (OpenAI path) | OpenAI | `text-embedding-3-small` (1536d) |

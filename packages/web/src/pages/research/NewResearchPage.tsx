@@ -15,7 +15,7 @@ import {
 import { researchApi } from '@/api/research.api';
 
 const PROVIDERS = [
-  { value: 'openai', label: 'OpenAI (gpt-4o-mini)' },
+  { value: 'openai', label: 'OpenAI (gpt-5.4-mini)' },
   { value: 'ollama', label: 'Ollama Cloud (gemma4:31b)' },
   { value: 'ollama-local', label: 'Ollama Local (llama3)' },
 ];
